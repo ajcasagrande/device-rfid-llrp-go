@@ -202,7 +202,7 @@ func (d *Driver) watchForConfigChanges() error {
 		Host:     cpUrl.Hostname(),
 		Port:     cpPort,
 		BasePath: BaseConsulPath,
-		Type:     cpUrl.Scheme,
+		Type:     strings.Split(cpUrl.Scheme, ".")[0],
 	})
 	if err != nil {
 		return err
