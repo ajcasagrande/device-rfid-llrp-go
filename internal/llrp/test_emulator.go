@@ -31,6 +31,10 @@ type TestEmulator struct {
 	responses   map[MessageType]Outgoing
 	responsesMu sync.Mutex
 
+	// keep track of custom handlers
+	handlers   map[MessageType]HandlerCallback
+	handlersMu sync.Mutex
+
 	// active connections/devices
 	devices   map[*TestDevice]bool
 	devicesMu sync.Mutex
@@ -40,6 +44,7 @@ func NewTestEmulator(silent bool) *TestEmulator {
 	return &TestEmulator{
 		silent:    silent,
 		responses: make(map[MessageType]Outgoing),
+		handlers:  make(map[MessageType]HandlerCallback),
 		devices:   make(map[*TestDevice]bool),
 	}
 }
@@ -102,6 +107,19 @@ func (emu *TestEmulator) handleNewConn(conn net.Conn) {
 		td.SetResponse(mt, out)
 	}
 	emu.responsesMu.Unlock()
+
+	emu.handlersMu.Lock()
+	for mt2, handler := range emu.handlers {
+		h := handler
+		td.reader.handlers[mt2] = MessageHandlerFunc(func(c *Client, msg Message) {
+			if td.wrongVersion(msg) {
+				return
+			}
+			h.Handle(td, msg)
+		})
+	}
+	emu.handlersMu.Unlock()
+
 	td.reader.handlers[MsgCloseConnection] = emu.createCloseHandler(td)
 
 	emu.devicesMu.Lock()
@@ -121,6 +139,18 @@ func (emu *TestEmulator) SetResponse(mt MessageType, out Outgoing) {
 	emu.responsesMu.Lock()
 	emu.responses[mt] = out
 	emu.responsesMu.Unlock()
+}
+
+// SetHandler adds a canned response to all future clients. Optionally,
+// if `applyExisting` is true, this will affect all currently active clients.
+//
+// NOTE 1: This will OVERRIDE existing response for given message type
+//
+// NOTE 2: Setting the response for MsgCloseConnection is NOT SUPPORTED and will be overridden by internal handler.
+func (emu *TestEmulator) SetHandler(mt MessageType, handler HandlerCallback) {
+	emu.handlersMu.Lock()
+	emu.handlers[mt] = handler
+	emu.handlersMu.Unlock()
 }
 
 // createCloseHandler handles a client request to close the connection.
