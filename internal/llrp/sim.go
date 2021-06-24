@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sync/atomic"
 	"time"
 )
 
@@ -64,9 +65,7 @@ func (sim *Simulator) SetCannedMessageResponses() {
 	sim.emu.SetResponse(MsgAddAccessSpec, &AddAccessSpecResponse{LLRPStatus: successStatus})
 	sim.emu.SetResponse(MsgDeleteROSpec, &DeleteROSpecResponse{LLRPStatus: successStatus})
 	sim.emu.SetResponse(MsgDeleteAccessSpec, &DeleteAccessSpecResponse{LLRPStatus: successStatus})
-	//sim.emu.SetResponse(MsgEnableROSpec, &EnableROSpecResponse{LLRPStatus: successStatus})
 	sim.emu.SetResponse(MsgEnableAccessSpec, &EnableAccessSpecResponse{LLRPStatus: successStatus})
-	//sim.emu.SetResponse(MsgDisableROSpec, &DisableROSpecResponse{LLRPStatus: successStatus})
 	sim.emu.SetResponse(MsgDisableAccessSpec, &DisableAccessSpecResponse{LLRPStatus: successStatus})
 
 	sim.emu.SetHandler(MsgEnableROSpec, HandlerCallbackFunc(func(td *TestDevice, msg Message) {
@@ -79,6 +78,11 @@ func (sim *Simulator) SetCannedMessageResponses() {
 		sim.reading = false
 		sim.Logger.Println("Reading is disabled!")
 		td.write(msg.id, &DisableROSpecResponse{LLRPStatus: successStatus})
+	}))
+
+	sim.emu.SetHandler(MsgKeepAliveAck, HandlerCallbackFunc(func(td *TestDevice, msg Message) {
+		sim.Logger.Println("Received KeepAliveAck")
+		// No response expected
 	}))
 
 	sim.emu.SetHandler(MsgCustomMessage, HandlerCallbackFunc(func(td *TestDevice, msg Message) {
@@ -113,6 +117,7 @@ func (sim *Simulator) StartAsync() error {
 		return err
 	}
 	go sim.TagLoop()
+	go sim.KeepAliveLoop()
 
 	return nil
 }
@@ -159,6 +164,17 @@ func firstSeenPtr() *FirstSeenUTC {
 	return &tm
 }
 
+func (sim *Simulator) KeepAliveLoop() {
+	// todo: read keep alive section of config to determine this
+	ticker := time.NewTicker(30 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			sim.SendKeepAlive()
+		}
+	}
+}
+
 func (sim *Simulator) TagLoop() {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	for {
@@ -187,9 +203,20 @@ func (sim *Simulator) SendTagData() {
 		},
 	}}
 	sim.emu.devicesMu.Lock()
-	for d, _ := range sim.emu.devices {
+	for d := range sim.emu.devices {
 		sim.Logger.Printf("sending tag read data")
-		d.write(messageID(999), data)
+		d.write(messageID(atomic.AddUint32((*uint32)(&d.mid), 1)), data)
+	}
+	sim.emu.devicesMu.Unlock()
+}
+
+func (sim *Simulator) SendKeepAlive() {
+	ka := &KeepAlive{}
+
+	sim.emu.devicesMu.Lock()
+	for d := range sim.emu.devices {
+		sim.Logger.Printf("sending keep alive")
+		d.write(messageID(atomic.AddUint32((*uint32)(&d.mid), 1)), ka)
 	}
 	sim.emu.devicesMu.Unlock()
 }
