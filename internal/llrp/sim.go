@@ -8,12 +8,13 @@ package llrp
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
-	"math"
 	"math/rand"
 	"os"
+	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -22,20 +23,10 @@ const (
 	defaultReadInterval = 50 * time.Millisecond
 )
 
-const (
-	rssiMin = -95
-	rssiMax = -55
-)
-
 var (
 	successStatus = LLRPStatus{
 		Status: StatusSuccess,
 	}
-
-	rssiStrong    = rssiMax - int(math.Floor((rssiMax-rssiMin)/3))
-	rssiWeak      = rssiMin + int(math.Floor((rssiMax-rssiMin)/3))
-	rssiRange     = rssiStrong - rssiWeak
-	rssiFullRange = rssiMax - rssiMin
 )
 
 type Simulator struct {
@@ -49,13 +40,17 @@ type Simulator struct {
 	kaTicker *time.Ticker
 	roTicker *time.Ticker
 
-	done chan bool
+	done chan struct{}
 }
 
 type SimulatorConfig struct {
-	Silent         bool
-	LLRPPort       int
-	ManagementPort int
+	Silent        bool
+	LLRPPort      int
+	AntennaCount  int
+	TagPopulation int
+	BaseEPC       string
+	MaxRSSI       int
+	MinRSSI       int
 
 	ReaderCapabilities GetReaderCapabilitiesResponse
 	ReaderConfig       GetReaderConfigResponse
@@ -68,7 +63,7 @@ func CreateSimulator(configFilename string) (*Simulator, error) {
 		Logger:   log.Default(),
 		kaTicker: time.NewTicker(1 * time.Hour),
 		roTicker: time.NewTicker(1 * time.Hour),
-		done:     make(chan bool),
+		done:     make(chan struct{}),
 	}
 	// stop the tickers because they start automatically
 	sim.kaTicker.Stop()
@@ -196,7 +191,7 @@ func (sim *Simulator) taskLoop() {
 // todo: stop management rest server
 func (sim *Simulator) Shutdown() error {
 	sim.Logger.Println("Shutting down simulator...")
-	sim.done <- true
+	close(sim.done)
 	return sim.emu.Shutdown()
 }
 
@@ -240,25 +235,29 @@ func (sim *Simulator) SendTagData() {
 		return
 	}
 
-	epc, _ := hex.DecodeString("3014000000000000000000ff")
-	// randomize last byte
-	//epc[len(epc)-1] = byte(rand.Intn(math.MaxUint8))
-	epc[len(epc)-1] = byte(rand.Intn(5))
+	// generate a suffix of hex chars
+	suffix := rand.Intn(sim.config.TagPopulation)
+	epcSuffix := fmt.Sprintf("%x", suffix)
+	it, _ := strconv.ParseUint(sim.config.BaseEPC[len(sim.config.BaseEPC)-len(epcSuffix):], 16, 64)
+	it += uint64(suffix)
+	epcSuffix = fmt.Sprintf("%x", it)
+	epcStr := sim.config.BaseEPC[:len(sim.config.BaseEPC)-len(epcSuffix)] + epcSuffix
+	epcBytes, _ := hex.DecodeString(epcStr)
 
 	data := &ROAccessReport{TagReportData: []TagReportData{
 		{
 			EPC96: EPC96{
-				EPC: epc,
+				EPC: epcBytes,
 			},
-			AntennaID:   antIdPtr(rand.Intn(4) + 1), // antennas are 1-based
-			PeakRSSI:    peakRssiPtr(int(rand.Float64()*float64(rssiFullRange)) + rssiMin),
+			AntennaID:   antIdPtr(rand.Intn(sim.config.AntennaCount) + 1), // antennas are 1-based
+			PeakRSSI:    peakRssiPtr(int(rand.Float64()*float64(sim.config.MaxRSSI-sim.config.MinRSSI)) + sim.config.MinRSSI),
 			LastSeenUTC: lastSeenPtr(),
 		},
 	}}
 
 	sim.emu.devicesMu.Lock()
 	sim.Logger.Printf("sending tag read data: %s\t%v\t%v\t%v\n",
-		hex.EncodeToString(epc),
+		epcStr,
 		*data.TagReportData[0].AntennaID, *data.TagReportData[0].PeakRSSI, *data.TagReportData[0].LastSeenUTC)
 	for td := range sim.emu.devices {
 		td.write(nextMessageId(td), data)

@@ -134,7 +134,10 @@ func (emu *TestEmulator) handleNewConn(conn net.Conn) {
 		//			  events occur.
 		log.Printf("error, already connected to another client. active connection count: %d", len(emu.devices))
 		td.write(nextMessageId(td), NewConnectMessage(ConnExistsClientInitiated))
-		_ = td.Close()
+		// Note: not calling td.Close directly because that will send a ConnectionClose event
+		// 		 that we do NOT want.
+		_ = td.reader.Close()
+		_ = td.rConn.Close()
 		emu.devicesMu.Unlock()
 		return
 	}

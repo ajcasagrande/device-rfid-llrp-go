@@ -1,8 +1,11 @@
 {
   "Silent": false,
   "LLRPPort": 5084,
-  "ManagementPort": 45084,
-  "LogLevel": "DEBUG",
+  "AntennaCount": 4,
+  "TagPopulation": 10,
+  "BaseEPC": "301400000000000000000010",
+  "MinRSSI": -95,
+  "MaxRSSI": -55,
   "ReaderCapabilities": {
     "LLRPStatus": {
       "Status": 0,
