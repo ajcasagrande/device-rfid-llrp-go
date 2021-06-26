@@ -74,7 +74,7 @@ type Func func(ctx context.Context) (bool, error)
 //
 // Concretely, if BackOff is 1s, the expected delay between attempt n and n+1 is
 // 1s, 2s, 4s, 16s, etc., and the total wait up to attempt n is 1s, 3s, 7s, 15s, etc.
-// With Jitter, these are the exact wait times (up to the OS-precision, of course),
+// Without Jitter, these are the exact wait times (up to the OS-precision, of course),
 // whereas with Jitter, these are the mean wait times.
 // Changing the BackOff duration scales these linearly:
 // a BackOff of 3s yields expected waits of 3s, 6s, 12s, etc.

@@ -27,7 +27,10 @@ const (
 	maxSendAttempts   = 3                // number of times to retry send in TrySend
 	keepAliveInterval = time.Second * 30 // how often the Reader should send us a KeepAlive
 	maxMissedKAs      = 2                // number of KAs that can be "missed" before resetting a connection
-	maxConnAttempts   = 2                // number of times to retry connecting before considering the device offline
+
+	// todo: this number used to be 2, but should be a lot larger, otherwise the retry.Quick fails
+	//		 way too fast
+	maxConnAttempts   = 20               // number of times to retry connecting before considering the device offline
 )
 
 // LLRPDevice manages a connection to a device that speaks LLRP,
@@ -178,6 +181,8 @@ func (d *Driver) NewLLRPDevice(name string, address net.Addr, opState contract.O
 				case nil:
 					return true, nil // connection reset normally
 				case context.Canceled:
+					// todo: this causes the service to not retry connecting when the reader
+					// 	     sends a ConnectionCloseEvent
 					return false, err // device stopped normally
 				}
 

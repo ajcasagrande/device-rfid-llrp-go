@@ -6,8 +6,11 @@
 package llrp
 
 import (
+	"github.com/pkg/errors"
+	"log"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -26,6 +29,7 @@ type TestEmulator struct {
 
 	listener net.Listener
 	done     uint32
+	connId   uint32
 
 	// keep track of canned responses
 	responses   map[MessageType]Outgoing
@@ -36,7 +40,7 @@ type TestEmulator struct {
 	handlersMu sync.Mutex
 
 	// active connections/devices
-	devices   map[*TestDevice]bool
+	devices   map[*TestDevice]uint32
 	devicesMu sync.Mutex
 }
 
@@ -45,7 +49,7 @@ func NewTestEmulator(silent bool) *TestEmulator {
 		silent:    silent,
 		responses: make(map[MessageType]Outgoing),
 		handlers:  make(map[MessageType]HandlerCallback),
-		devices:   make(map[*TestDevice]bool),
+		devices:   make(map[*TestDevice]uint32),
 	}
 }
 
@@ -62,11 +66,24 @@ func (emu *TestEmulator) StartAsync(port int) error {
 	return nil
 }
 
+type MultiErr []error
+
+//goland:noinspection GoReceiverNames
+func (me MultiErr) Error() string {
+	strs := make([]string, len(me))
+	for i, s := range me {
+		strs[i] = s.Error()
+	}
+
+	return strings.Join(strs, "; ")
+}
+
 // Shutdown attempts to cleanly shutdown the emulator
 func (emu *TestEmulator) Shutdown() error {
+	var errs MultiErr
 	atomic.StoreUint32(&emu.done, 1)
 	if err := emu.listener.Close(); err != nil {
-		return err
+		errs = append(errs, err)
 	}
 
 	emu.devicesMu.Lock()
@@ -74,10 +91,13 @@ func (emu *TestEmulator) Shutdown() error {
 
 	for dev := range emu.devices {
 		if err := dev.Close(); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
 
+	if len(errs) > 0 {
+		return errors.New(errs.Error())
+	}
 	return nil
 }
 
@@ -97,10 +117,28 @@ func (emu *TestEmulator) listenUntilCancelled() {
 
 // handleNewConn handles a new incoming connection the net.Listener (should be spawned async)
 func (emu *TestEmulator) handleNewConn(conn net.Conn) {
+	id := atomic.AddUint32(&emu.connId, 1)
+	log.Printf("handing new connection. id=%d", id)
 	td, err := NewReaderOnlyTestDevice(conn, emu.silent)
 	if err != nil {
 		panic("unable to create a new ReaderOnly TestDevice: " + err.Error())
 	}
+
+	emu.devicesMu.Lock()
+	if len(emu.devices) > 0 {
+		// todo: we might have a connection leak somewhere, so this code causes issues if we are disconnected
+		// 		 abruptly and client attempts to reconnect
+		// todo note: I think there may not be a connection leak, but actually a bug with one
+		//			  or both of the services where the reader gets put in a DISABLED state and not
+		//			  reset back to ENABLED, or the inventory service is not listening for when these
+		//			  events occur.
+		log.Printf("error, already connected to another client. active connection count: %d", len(emu.devices))
+		td.write(nextMessageId(td), NewConnectMessage(ConnExistsClientInitiated))
+		_ = td.Close()
+		emu.devicesMu.Unlock()
+		return
+	}
+	emu.devicesMu.Unlock()
 
 	emu.responsesMu.Lock()
 	for mt, out := range emu.responses {
@@ -123,10 +161,12 @@ func (emu *TestEmulator) handleNewConn(conn net.Conn) {
 	td.reader.handlers[MsgCloseConnection] = emu.createCloseHandler(td)
 
 	emu.devicesMu.Lock()
-	emu.devices[td] = true
+	emu.devices[td] = id
+	log.Printf("active connection count: %d", len(emu.devices))
 	emu.devicesMu.Unlock()
 
 	td.ImpersonateReader()
+	log.Printf("connection id=%d ended", id)
 }
 
 // SetResponse adds a canned response to all future clients. Optionally,
@@ -162,12 +202,18 @@ func (emu *TestEmulator) createCloseHandler(td *TestDevice) MessageHandlerFunc {
 
 		td.write(msg.id, &CloseConnectionResponse{})
 
+		emu.devicesMu.Lock()
+		id := emu.devices[td]
+		emu.devicesMu.Unlock()
+		log.Printf("closing connection id=%d", id)
+
 		_ = td.reader.Close()
 		_ = td.rConn.Close()
 
 		emu.devicesMu.Lock()
 		// remove it from the set of active connections
 		delete(emu.devices, td)
+		log.Printf("active connection count: %d", len(emu.devices))
 		emu.devicesMu.Unlock()
 	}
 }
