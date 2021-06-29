@@ -6,21 +6,25 @@
 package llrp
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
+	"flag"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"math/rand"
 	"os"
-	"strconv"
-	"sync/atomic"
 	"time"
 )
 
 const (
-	defaultReadInterval = 50 * time.Millisecond
+	defaultReadInterval  = 50 * time.Millisecond
+	defaultAntennaCount  = 2
+	defaultPort          = 5084
+	defaultTagPopulation = 20
+	defaultMinRSSI       = -80 // -95
+	defaultMaxRSSI       = -60 // -55
+	defaultBaseEPC       = "301400000000000000000000"
 )
 
 var (
@@ -30,10 +34,10 @@ var (
 )
 
 type Simulator struct {
-	filename string
-	config   SimulatorConfig
-	emu      *TestEmulator
-	Logger   *log.Logger
+	flags  ConfigFlags
+	config SimulatorConfig
+	emu    *TestEmulator
+	Logger *log.Logger
 
 	reading bool
 
@@ -43,7 +47,8 @@ type Simulator struct {
 	done chan struct{}
 }
 
-type SimulatorConfig struct {
+type ConfigFlags struct {
+	Filename      string
 	Silent        bool
 	LLRPPort      int
 	AntennaCount  int
@@ -51,15 +56,55 @@ type SimulatorConfig struct {
 	BaseEPC       string
 	MaxRSSI       int
 	MinRSSI       int
+}
 
+type SimulatorConfig struct {
 	ReaderCapabilities GetReaderCapabilitiesResponse
 	ReaderConfig       GetReaderConfigResponse
 }
 
+func parseFlags() ConfigFlags {
+	var cf ConfigFlags
+
+	flag.BoolVar(&cf.Silent, "s", false, "silent")
+	flag.BoolVar(&cf.Silent, "silent", false, "silent")
+
+	flag.IntVar(&cf.LLRPPort, "p", defaultPort, "llrp port")
+	flag.IntVar(&cf.LLRPPort, "port", defaultPort, "llrp port")
+
+	flag.IntVar(&cf.AntennaCount, "a", defaultAntennaCount, "antenna count")
+	flag.IntVar(&cf.AntennaCount, "antenna-count", defaultAntennaCount, "antenna count")
+
+	flag.IntVar(&cf.TagPopulation, "t", defaultTagPopulation, "tag population count")
+	flag.IntVar(&cf.TagPopulation, "tags", defaultTagPopulation, "tag population count")
+	flag.IntVar(&cf.TagPopulation, "tag-population", defaultTagPopulation, "tag population count")
+
+	flag.StringVar(&cf.BaseEPC, "e", defaultBaseEPC, "Base EPC")
+	flag.StringVar(&cf.BaseEPC, "epc", defaultBaseEPC, "Base EPC")
+	flag.StringVar(&cf.BaseEPC, "base-epc", defaultBaseEPC, "Base EPC")
+
+	flag.IntVar(&cf.MaxRSSI, "M", defaultMaxRSSI, "max rssi")
+	flag.IntVar(&cf.MaxRSSI, "max", defaultMaxRSSI, "max rssi")
+	flag.IntVar(&cf.MaxRSSI, "max-rssi", defaultMaxRSSI, "max rssi")
+
+	flag.IntVar(&cf.MinRSSI, "m", defaultMinRSSI, "min rssi")
+	flag.IntVar(&cf.MinRSSI, "min", defaultMinRSSI, "min rssi")
+	flag.IntVar(&cf.MinRSSI, "min-rssi", defaultMinRSSI, "min rssi")
+
+	flag.StringVar(&cf.Filename, "f", "", "config filename")
+	flag.StringVar(&cf.Filename, "file", "", "config filename")
+
+	flag.Parse()
+
+	log.Printf("flags: %+v", cf)
+
+	return cf
+}
+
 // CreateSimulator parses config file and sets up a new simulator but does not start it
-func CreateSimulator(configFilename string) (*Simulator, error) {
+func CreateSimulator() (*Simulator, error) {
 	sim := Simulator{
-		filename: configFilename,
+		flags:    parseFlags(),
 		Logger:   log.Default(),
 		kaTicker: time.NewTicker(1 * time.Hour),
 		roTicker: time.NewTicker(1 * time.Hour),
@@ -69,13 +114,13 @@ func CreateSimulator(configFilename string) (*Simulator, error) {
 	sim.kaTicker.Stop()
 	sim.roTicker.Stop()
 
-	sim.Logger.Printf("Loading simulator config from '%s'", configFilename)
+	sim.Logger.Printf("Loading simulator config from '%s'", sim.flags.Filename)
 	if err := sim.loadConfig(); err != nil {
 		return nil, err
 	}
 	sim.Logger.Println("Successfully loaded simulator config.")
 
-	sim.emu = NewTestEmulator(sim.config.Silent)
+	sim.emu = NewTestEmulator(sim.flags.Silent)
 	sim.SetCannedMessageResponses()
 
 	return &sim, nil
@@ -163,8 +208,8 @@ func (hcf HandlerCallbackFunc) Handle(td *TestDevice, msg Message) {
 // StartAsync starts processing llrp messages async
 // todo: add management rest server
 func (sim *Simulator) StartAsync() error {
-	sim.Logger.Printf("Starting simulator on llrp port: %d\n", sim.config.LLRPPort)
-	if err := sim.emu.StartAsync(sim.config.LLRPPort); err != nil {
+	sim.Logger.Printf("Starting simulator on llrp port: %d\n", sim.flags.LLRPPort)
+	if err := sim.emu.StartAsync(sim.flags.LLRPPort); err != nil {
 		return err
 	}
 
@@ -196,15 +241,15 @@ func (sim *Simulator) Shutdown() error {
 }
 
 func (sim *Simulator) loadConfig() error {
-	f, err := os.Open(sim.filename)
+	f, err := os.Open(sim.flags.Filename)
 	if err != nil {
-		return errors.Wrapf(err, "error opening simulator config file '%s'", sim.filename)
+		return errors.Wrapf(err, "error opening simulator config file '%s'", sim.flags.Filename)
 	}
 	defer f.Close()
 
 	data, err := ioutil.ReadAll(f)
 	if err != nil {
-		return errors.Wrapf(err, "error reading simulator config file '%s'", sim.filename)
+		return errors.Wrapf(err, "error reading simulator config file '%s'", sim.flags.Filename)
 	}
 
 	err = json.Unmarshal(data, &sim.config)
@@ -215,52 +260,59 @@ func (sim *Simulator) loadConfig() error {
 	return nil
 }
 
-func peakRssiPtr(val int) *PeakRSSI {
-	rssi := PeakRSSI(val)
+// randomRSSI generates a pseudo-random *PeakRSSI integer between [min, max]
+func randomRSSI(min, max int) *PeakRSSI {
+	rssi := PeakRSSI(int(rand.Float64()*float64(max-min)) + min)
 	return &rssi
 }
 
-func antIdPtr(val int) *AntennaID {
-	ant := AntennaID(val)
+// randomAntennaID generates a pseudo-random *AntennaID uint between [1, antennaCount+1]
+func randomAntennaID(antennaCount int) *AntennaID {
+	ant := AntennaID(rand.Intn(antennaCount) + 1) // antennas are 1-based
 	return &ant
 }
 
-func lastSeenPtr() *LastSeenUTC {
-	tm := LastSeenUTC(time.Now().UnixNano() / 1e3)
-	return &tm
+// lastSeenPtr converts a time.Time into a *LastSeenUTC (microseconds since epoch)
+func lastSeenPtr(tm time.Time) *LastSeenUTC {
+	tm2 := LastSeenUTC(tm.UnixNano() / 1e3)
+	return &tm2
 }
 
+// randomEPC generates a new pseudo-random EPC between [baseEPC, baseEPC+tagPopulation)
+func randomEPC(baseEPC string, tagPopulation int) *big.Int {
+	epc := new(big.Int)
+	// parse baseEPC into a big Int
+	epc.SetString(baseEPC, 16)
+	// add a pseudo-random offset between [0, tagPopulation)
+	epc.Add(epc, big.NewInt(int64(rand.Intn(tagPopulation))))
+	return epc
+}
+
+// SendTagData generates a new ROAccessReport using random data and sends it via llrp
 func (sim *Simulator) SendTagData() {
 	if !sim.reading {
 		return
 	}
 
-	// generate a suffix of hex chars
-	suffix := rand.Intn(sim.config.TagPopulation)
-	epcSuffix := fmt.Sprintf("%x", suffix)
-	it, _ := strconv.ParseUint(sim.config.BaseEPC[len(sim.config.BaseEPC)-len(epcSuffix):], 16, 64)
-	it += uint64(suffix)
-	epcSuffix = fmt.Sprintf("%x", it)
-	epcStr := sim.config.BaseEPC[:len(sim.config.BaseEPC)-len(epcSuffix)] + epcSuffix
-	epcBytes, _ := hex.DecodeString(epcStr)
+	epc := randomEPC(sim.flags.BaseEPC, sim.flags.TagPopulation)
 
 	data := &ROAccessReport{TagReportData: []TagReportData{
 		{
 			EPC96: EPC96{
-				EPC: epcBytes,
+				EPC: epc.Bytes(),
 			},
-			AntennaID:   antIdPtr(rand.Intn(sim.config.AntennaCount) + 1), // antennas are 1-based
-			PeakRSSI:    peakRssiPtr(int(rand.Float64()*float64(sim.config.MaxRSSI-sim.config.MinRSSI)) + sim.config.MinRSSI),
-			LastSeenUTC: lastSeenPtr(),
+			AntennaID:   randomAntennaID(sim.flags.AntennaCount),
+			PeakRSSI:    randomRSSI(sim.flags.MinRSSI, sim.flags.MaxRSSI),
+			LastSeenUTC: lastSeenPtr(time.Now()),
 		},
 	}}
 
 	sim.emu.devicesMu.Lock()
 	sim.Logger.Printf("sending tag read data: %s\t%v\t%v\t%v\n",
-		epcStr,
-		*data.TagReportData[0].AntennaID, *data.TagReportData[0].PeakRSSI, *data.TagReportData[0].LastSeenUTC)
+		epc.Text(16), *data.TagReportData[0].AntennaID, *data.TagReportData[0].PeakRSSI, *data.TagReportData[0].LastSeenUTC)
+	// when single-connection mode is enabled, this should only ever be one device
 	for td := range sim.emu.devices {
-		td.write(nextMessageId(td), data)
+		td.write(td.nextMessageId(), data)
 	}
 	sim.emu.devicesMu.Unlock()
 }
@@ -271,11 +323,7 @@ func (sim *Simulator) SendKeepAlive() {
 	sim.emu.devicesMu.Lock()
 	for td := range sim.emu.devices {
 		sim.Logger.Printf("sending keep alive")
-		td.write(nextMessageId(td), ka)
+		td.write(td.nextMessageId(), ka)
 	}
 	sim.emu.devicesMu.Unlock()
-}
-
-func nextMessageId(td *TestDevice) messageID {
-	return messageID(atomic.AddUint32((*uint32)(&td.mid), 1))
 }

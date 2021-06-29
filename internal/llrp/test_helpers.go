@@ -76,10 +76,9 @@ type TestDevice struct {
 	Client, reader *Client
 	cConn, rConn   net.Conn
 
-	ReaderLogs ClientLogger
-	w          *msgWriter
-	maxVer     VersionNum
-	mid        messageID
+	w      *msgWriter
+	maxVer VersionNum
+	mid    messageID
 
 	errsMu sync.Mutex
 	errors []error
@@ -182,10 +181,10 @@ func (td *TestDevice) wrongVersion(msg Message) bool {
 		return false
 	}
 
-	_ = td.errCheck(td.w.Write(msg.id, &ErrorMessage{LLRPStatus: LLRPStatus{
+	td.write(msg.id, &ErrorMessage{LLRPStatus: LLRPStatus{
 		Status:           StatusMsgVerUnsupported,
 		ErrorDescription: StatusMsgVerUnsupported.defaultText(),
-	}}))
+	}})
 	return true
 }
 
@@ -205,7 +204,7 @@ func (td *TestDevice) getSupportedVersion(_ *Client, msg Message) {
 	defer func() { td.w.header.version = oldV }()
 
 	td.w.header.version = Version1_1
-	_ = td.errCheck(td.w.Write(msg.id, rsp))
+	td.write(msg.id, rsp)
 }
 
 // setVersion responds to the SetProtocolVersion message.
@@ -221,18 +220,18 @@ func (td *TestDevice) setVersion(_ *Client, msg Message) {
 	}
 
 	if spv.TargetVersion > td.maxVer {
-		_ = td.errCheck(td.w.Write(msg.id, &ErrorMessage{LLRPStatus: LLRPStatus{
+		td.write(msg.id, &ErrorMessage{LLRPStatus: LLRPStatus{
 			Status:           StatusMsgVerUnsupported,
 			ErrorDescription: fmt.Sprintf("max supported is %d", td.maxVer),
-		}}))
+		}})
 		return
 	}
 
 	if spv.TargetVersion < VersionMin {
-		_ = td.errCheck(td.w.Write(msg.id, &ErrorMessage{LLRPStatus: LLRPStatus{
+		td.write(msg.id, &ErrorMessage{LLRPStatus: LLRPStatus{
 			Status:           StatusMsgVerUnsupported,
 			ErrorDescription: fmt.Sprintf("min supported is %d", VersionMin),
-		}}))
+		}})
 		return
 	}
 
@@ -245,7 +244,7 @@ func (td *TestDevice) setVersion(_ *Client, msg Message) {
 
 // write a given Outgoing message with the given id.
 func (td *TestDevice) write(mid messageID, out Outgoing) {
-	_ = td.errCheck(td.w.Write(mid, out))
+	_ = td.errCheck(td.w.Write(td.reader.logger, mid, out))
 }
 
 // handleUnknownMessage responds with the correct LLRPStatus for unknown messages.
@@ -264,7 +263,7 @@ func (td *TestDevice) handleUnknownMessage(_ *Client, msg Message) {
 // as if a Client had correctly dialed it, but before version negotiation begins.
 func (td *TestDevice) ImpersonateReader() {
 	td.write(
-		messageID(atomic.AddUint32((*uint32)(&td.mid), 1)),
+		td.nextMessageId(),
 		NewConnectMessage(ConnSuccess))
 	close(td.reader.ready)
 	// This is notably simpler than actually correctly managing the message queues.
@@ -285,8 +284,8 @@ func (td *TestDevice) Close() (err error) {
 		_ = td.rConn.Close()
 	}()
 
-	err = td.w.Write(
-		messageID(atomic.AddUint32((*uint32)(&td.mid), 1)),
+	err = td.w.Write(td.reader.logger,
+		td.nextMessageId(),
 		NewCloseMessage())
 	return
 }
@@ -334,6 +333,11 @@ func (td *TestDevice) ConnectClient(t *testing.T) (c *Client) {
 	})
 
 	return c
+}
+
+// nextMessageId atomically increments the current messageId by 1 and returns that new messageId
+func (td *TestDevice) nextMessageId() messageID {
+	return messageID(atomic.AddUint32((*uint32)(&td.mid), 1))
 }
 
 func NewConnectMessage(eventType ConnectionAttemptEventType) *ReaderEventNotification {

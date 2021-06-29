@@ -334,11 +334,11 @@ func (c *Client) setStdLogger(prefix string) {
 	c.logger = l
 }
 func (l *StdLogger) SendingMsg(hdr Header) {
-	l.Printf("<<< message{%v}", hdr)
+	l.Printf("--> send msg{%v}", hdr)
 }
 
 func (l *StdLogger) ReceivedMsg(hdr Header, curVer VersionNum) {
-	l.Printf(">>> message{%v}", hdr)
+	l.Printf("<-- recv msg{%v}", hdr)
 	if curVer != hdr.version {
 		l.Printf("warning: incoming message version != %v: %v", curVer, hdr)
 	}

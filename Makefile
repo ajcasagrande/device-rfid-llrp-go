@@ -46,3 +46,9 @@ docker_device_rfid_llrp_go:
 		-t edgexfoundry/docker-device-rfid-llrp-go:$(GIT_SHA) \
 		-t edgexfoundry/docker-device-rfid-llrp-go:$(VERSION)-dev \
 		.
+
+fmt:
+	go fmt ./...
+
+run: build
+	cd cmd && ./device-rfid-llrp-go -cp=consul.http://localhost:8500 -confdir=res

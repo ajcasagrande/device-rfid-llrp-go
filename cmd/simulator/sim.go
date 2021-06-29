@@ -13,18 +13,8 @@ import (
 	"syscall"
 )
 
-func printHelp() {
-	fmt.Printf("Help: %s configFilename.json\n", os.Args[0])
-}
-
 func main() {
-	if len(os.Args) < 2 {
-		printHelp()
-		os.Exit(1)
-	}
-
-	fname := os.Args[1]
-	sim, err := llrp.CreateSimulator(fname)
+	sim, err := llrp.CreateSimulator()
 	if err != nil {
 		fmt.Printf("Error creating simulator: %v", err)
 		os.Exit(1)

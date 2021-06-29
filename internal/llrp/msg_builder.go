@@ -70,7 +70,7 @@ func newMsgWriter(w io.Writer, version VersionNum) *msgWriter {
 	}
 }
 
-func (mw *msgWriter) Write(mid messageID, out Outgoing) error {
+func (mw *msgWriter) Write(lgr ClientLogger, mid messageID, out Outgoing) error {
 	mw.mu.Lock()
 	defer mw.mu.Unlock()
 
@@ -87,6 +87,7 @@ func (mw *msgWriter) Write(mid messageID, out Outgoing) error {
 	mw.header.payloadLen = uint32(len(data))
 	mw.header.typ = out.Type()
 	mw.header.id = mid
+	lgr.SendingMsg(mw.header)
 	if _, err := mw.header.WriteTo(mw.w); err != nil {
 		return err
 	}
