@@ -6,8 +6,10 @@
 package llrp
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
@@ -18,7 +20,7 @@ import (
 )
 
 const (
-	defaultReadInterval  = 50 * time.Millisecond
+	defaultReadRate      = 100
 	defaultAntennaCount  = 2
 	defaultPort          = 5084
 	defaultTagPopulation = 20
@@ -44,7 +46,13 @@ type Simulator struct {
 	kaTicker *time.Ticker
 	roTicker *time.Ticker
 
+	state *simulatorState
+
 	done chan struct{}
+}
+
+type simulatorState struct {
+	ro *ROSpec
 }
 
 type ConfigFlags struct {
@@ -56,6 +64,7 @@ type ConfigFlags struct {
 	BaseEPC       string
 	MaxRSSI       int
 	MinRSSI       int
+	ReadRate      int
 }
 
 type SimulatorConfig struct {
@@ -94,7 +103,16 @@ func parseFlags() ConfigFlags {
 	flag.StringVar(&cf.Filename, "f", "", "config filename")
 	flag.StringVar(&cf.Filename, "file", "", "config filename")
 
+	flag.IntVar(&cf.ReadRate, "r", defaultReadRate, "read rate (tags/s)")
+	flag.IntVar(&cf.ReadRate, "rate", defaultReadRate, "read rate (tags/s)")
+	flag.IntVar(&cf.ReadRate, "read-rate", defaultReadRate, "read rate (tags/s)")
+
 	flag.Parse()
+
+	if cf.Filename == "" {
+		fmt.Printf("Missing required argument -f/--file\n")
+		os.Exit(2)
+	}
 
 	log.Printf("flags: %+v", cf)
 
@@ -106,13 +124,18 @@ func CreateSimulator() (*Simulator, error) {
 	sim := Simulator{
 		flags:    parseFlags(),
 		Logger:   log.Default(),
-		kaTicker: time.NewTicker(1 * time.Hour),
-		roTicker: time.NewTicker(1 * time.Hour),
+		kaTicker: time.NewTicker(time.Hour), // bogus time since we are stopping it right away
+		roTicker: time.NewTicker(time.Hour), // bogus time since we are stopping it right away
+		state:    &simulatorState{},
 		done:     make(chan struct{}),
 	}
 	// stop the tickers because they start automatically
 	sim.kaTicker.Stop()
 	sim.roTicker.Stop()
+
+	if sim.flags.Filename == "" {
+		return nil, fmt.Errorf("please specify filename")
+	}
 
 	sim.Logger.Printf("Loading simulator config from '%s'", sim.flags.Filename)
 	if err := sim.loadConfig(); err != nil {
@@ -121,25 +144,27 @@ func CreateSimulator() (*Simulator, error) {
 	sim.Logger.Println("Successfully loaded simulator config.")
 
 	sim.emu = NewTestEmulator(sim.flags.Silent)
-	sim.SetCannedMessageResponses()
+	sim.setupHandlers()
 
 	return &sim, nil
 }
 
-func (sim *Simulator) SetCannedMessageResponses() {
-	sim.emu.SetResponse(MsgGetReaderConfig, &sim.config.ReaderConfig)
-	sim.emu.SetResponse(MsgGetReaderCapabilities, &sim.config.ReaderCapabilities)
+func (sim *Simulator) setupHandlers() {
+	sim.emu.SetHandler(MsgGetReaderConfig, HandlerCallbackFunc(sim.handleGetReaderConfig))
+	sim.emu.SetHandler(MsgGetReaderCapabilities, HandlerCallbackFunc(sim.handleGetReaderCapabilities))
 
-	sim.emu.SetResponse(MsgAddROSpec, &AddROSpecResponse{LLRPStatus: successStatus})
-	sim.emu.SetResponse(MsgAddAccessSpec, &AddAccessSpecResponse{LLRPStatus: successStatus})
-	sim.emu.SetResponse(MsgDeleteROSpec, &DeleteROSpecResponse{LLRPStatus: successStatus})
-	sim.emu.SetResponse(MsgDeleteAccessSpec, &DeleteAccessSpecResponse{LLRPStatus: successStatus})
-	sim.emu.SetResponse(MsgEnableAccessSpec, &EnableAccessSpecResponse{LLRPStatus: successStatus})
-	sim.emu.SetResponse(MsgDisableAccessSpec, &DisableAccessSpecResponse{LLRPStatus: successStatus})
+	sim.emu.SetHandler(MsgAddROSpec, HandlerCallbackFunc(sim.handleAddROSpec))
+	sim.emu.SetHandler(MsgAddAccessSpec, HandlerCallbackFunc(sim.handleAddAccessSpec))
+	sim.emu.SetHandler(MsgDeleteROSpec, HandlerCallbackFunc(sim.handleDeleteROSpec))
+	sim.emu.SetHandler(MsgDeleteAccessSpec, HandlerCallbackFunc(sim.handleDeleteAccessSpec))
+	sim.emu.SetHandler(MsgEnableAccessSpec, HandlerCallbackFunc(sim.handleEnableAccessSpec))
+	sim.emu.SetHandler(MsgDisableAccessSpec, HandlerCallbackFunc(sim.handleDisableAccessSpec))
 
 	sim.emu.SetHandler(MsgSetReaderConfig, HandlerCallbackFunc(sim.handleSetReaderConfig))
 	sim.emu.SetHandler(MsgEnableROSpec, HandlerCallbackFunc(sim.handleEnableROSpec))
 	sim.emu.SetHandler(MsgDisableROSpec, HandlerCallbackFunc(sim.handleDisableROSpec))
+	sim.emu.SetHandler(MsgStartROSpec, HandlerCallbackFunc(sim.handleStartROSpec))
+	sim.emu.SetHandler(MsgStopROSpec, HandlerCallbackFunc(sim.handleStopROSpec))
 	sim.emu.SetHandler(MsgCustomMessage, HandlerCallbackFunc(sim.handleCustomMessage))
 	sim.emu.SetHandler(MsgKeepAliveAck, HandlerCallbackFunc(sim.handleKeepAliveAck))
 }
@@ -155,14 +180,108 @@ func (sim *Simulator) handleCustomMessage(td *TestDevice, msg Message) {
 		sim.Logger.Printf("Failed to unmarshal async event from LLRP. error: %v\n", err)
 		return
 	}
+	// todo: hack: we are assuming the MessageSubtype for the Response is always 1 more than the request
+	custom.MessageSubtype += 1
+
+	success := LLRPStatus{Status: StatusSuccess}
+	b := bytes.Buffer{}
+	if err := encodeParams(&b, success.getHeader()); err != nil {
+		sim.Logger.Printf("Unable to encode LLRPStatus success. error: %v", err)
+	} else {
+		custom.Data = b.Bytes()
+	}
+
 	td.write(msg.id, custom)
+}
+
+func (sim *Simulator) handleGetReaderConfig(td *TestDevice, msg Message) {
+	td.write(msg.id, &sim.config.ReaderConfig)
+}
+
+func (sim *Simulator) handleGetReaderCapabilities(td *TestDevice, msg Message) {
+	td.write(msg.id, &sim.config.ReaderCapabilities)
+}
+
+func (sim *Simulator) handleAddROSpec(td *TestDevice, msg Message) {
+	addRO := &AddROSpec{}
+	if err := msg.UnmarshalTo(addRO); err != nil {
+		sim.Logger.Printf("Failed to unmarshal async event from LLRP. error: %v\n", err)
+		return
+	}
+
+	if sim.state.ro != nil {
+		// todo: what should this return?
+		if sim.state.ro.ROSpecID == addRO.ROSpec.ROSpecID {
+			td.write(msg.id, &AddROSpecResponse{LLRPStatus: LLRPStatus{
+				Status:           StatusFieldInvalid,
+				ErrorDescription: fmt.Sprintf("ROSpec already exists with id %d", sim.state.ro.ROSpecID),
+			}})
+		} else {
+			td.write(msg.id, &AddROSpecResponse{LLRPStatus: LLRPStatus{
+				Status:           StatusFieldInvalid,
+				ErrorDescription: "Only one ROSpec supported by this device",
+			}})
+		}
+		return
+	}
+
+	sim.state.ro = &addRO.ROSpec
+	td.write(msg.id, &AddROSpecResponse{LLRPStatus: successStatus})
+}
+
+func (sim *Simulator) handleDeleteROSpec(td *TestDevice, msg Message) {
+	delRO := &DeleteROSpec{}
+	if err := msg.UnmarshalTo(delRO); err != nil {
+		sim.Logger.Printf("Failed to unmarshal async event from LLRP. error: %v\n", err)
+		return
+	}
+
+	if sim.state.ro != nil && sim.state.ro.ROSpecID == delRO.ROSpecID {
+		// todo: what should this return?
+		td.write(msg.id, &DeleteROSpecResponse{LLRPStatus: LLRPStatus{
+			Status:           StatusFieldInvalid,
+			ErrorDescription: fmt.Sprintf("Missing ROSpec with id %d", delRO.ROSpecID),
+		}})
+		return
+	}
+
+	// remove roSpec
+	sim.state.ro = nil
+
+	td.write(msg.id, &DeleteROSpecResponse{LLRPStatus: successStatus})
+}
+
+func (sim *Simulator) handleStartROSpec(td *TestDevice, msg Message) {
+	sim.reading = true
+	td.write(msg.id, &StartROSpecResponse{LLRPStatus: successStatus})
 }
 
 func (sim *Simulator) handleEnableROSpec(td *TestDevice, msg Message) {
 	sim.reading = true
-	sim.roTicker.Reset(defaultReadInterval)
+	ro := sim.state.ro
+
+	interval := time.Second / time.Duration(sim.flags.ReadRate)
+
+	if ro != nil && ro.ROReportSpec != nil {
+		switch ro.ROReportSpec.Trigger {
+		case NSecondsOrAIEnd, NSecondsOrROEnd:
+			interval = time.Duration(ro.ROReportSpec.N) * time.Second
+		case NMillisOrAIEnd, NMillisOrROEnd:
+			interval = time.Duration(ro.ROReportSpec.N) * time.Millisecond
+		}
+	}
+
+	sim.Logger.Printf("setting read interval to %v", interval)
+	sim.roTicker.Reset(interval)
 	sim.Logger.Println("Reading is enabled!")
 	td.write(msg.id, &EnableROSpecResponse{LLRPStatus: successStatus})
+}
+
+func (sim *Simulator) handleStopROSpec(td *TestDevice, msg Message) {
+	sim.reading = false
+	sim.roTicker.Stop()
+	sim.Logger.Println("Reading is stopped!")
+	td.write(msg.id, &StopROSpecResponse{LLRPStatus: successStatus})
 }
 
 func (sim *Simulator) handleDisableROSpec(td *TestDevice, msg Message) {
@@ -172,6 +291,22 @@ func (sim *Simulator) handleDisableROSpec(td *TestDevice, msg Message) {
 	td.write(msg.id, &DisableROSpecResponse{LLRPStatus: successStatus})
 }
 
+func (sim *Simulator) handleAddAccessSpec(td *TestDevice, msg Message) {
+	td.write(msg.id, &AddAccessSpecResponse{LLRPStatus: successStatus})
+}
+
+func (sim *Simulator) handleEnableAccessSpec(td *TestDevice, msg Message) {
+	td.write(msg.id, &EnableAccessSpecResponse{LLRPStatus: successStatus})
+}
+
+func (sim *Simulator) handleDisableAccessSpec(td *TestDevice, msg Message) {
+	td.write(msg.id, &DisableAccessSpecResponse{LLRPStatus: successStatus})
+}
+
+func (sim *Simulator) handleDeleteAccessSpec(td *TestDevice, msg Message) {
+	td.write(msg.id, &DeleteAccessSpecResponse{LLRPStatus: successStatus})
+}
+
 func (sim *Simulator) handleSetReaderConfig(td *TestDevice, msg Message) {
 	cfg := &SetReaderConfig{}
 	if err := msg.UnmarshalTo(cfg); err != nil {
@@ -179,11 +314,11 @@ func (sim *Simulator) handleSetReaderConfig(td *TestDevice, msg Message) {
 		return
 	}
 
-	if cfg.KeepAliveSpec.Trigger == KATriggerPeriodic {
+	if cfg.KeepAliveSpec != nil && cfg.KeepAliveSpec.Trigger == KATriggerPeriodic {
 		dur := time.Duration(cfg.KeepAliveSpec.Interval) * time.Millisecond
 		sim.Logger.Printf("Setting keep alive duration to %v\n", dur)
 		sim.kaTicker.Reset(dur)
-	} else {
+	} else { // KATriggerNone
 		sim.Logger.Println("Disabling keep alive")
 		sim.kaTicker.Stop()
 	}
@@ -208,7 +343,7 @@ func (hcf HandlerCallbackFunc) Handle(td *TestDevice, msg Message) {
 // StartAsync starts processing llrp messages async
 // todo: add management rest server
 func (sim *Simulator) StartAsync() error {
-	sim.Logger.Printf("Starting simulator on llrp port: %d\n", sim.flags.LLRPPort)
+	sim.Logger.Printf("Starting llrp simulator on port: %d\n", sim.flags.LLRPPort)
 	if err := sim.emu.StartAsync(sim.flags.LLRPPort); err != nil {
 		return err
 	}
