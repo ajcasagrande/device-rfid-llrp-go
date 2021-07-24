@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2021 Intel Corporation
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -1440,6 +1440,37 @@ func (m *CustomMessage) UnmarshalBinary(data []byte) error {
 	m.Data = make([]byte, len(data)-5)
 	copy(m.Data, data[5:])
 	data = data[5:]
+	return nil
+}
+
+// UnmarshalBinary Message 1023, CustomMessageResponse.
+func (m *CustomMessageResponse) UnmarshalBinary(data []byte) error {
+	if len(data) < 13 {
+		return errors.Errorf("CustomMessageResponse length should be at "+
+			"least 13, but is %d", len(data))
+	}
+	m.VendorID = binary.BigEndian.Uint32(data)
+	m.MessageSubtype = data[4]
+	data = data[5:]
+	// sub-parameters
+	if subType := ParamType(binary.BigEndian.Uint16(data)); subType != ParamLLRPStatus {
+		return errors.Errorf("expected ParamLLRPStatus, but found %v",
+			subType)
+	} else {
+		subLen := binary.BigEndian.Uint16(data[2:])
+		if int(subLen) > len(data) {
+			return errors.Errorf("ParamLLRPStatus says it has %d bytes, but "+
+				"only %d bytes remain", subLen, len(data))
+		}
+		if err := m.LLRPStatus.UnmarshalBinary(data[4:subLen]); err != nil {
+			return err
+		}
+		data = data[subLen:]
+	}
+	if len(data) > 0 {
+		return errors.Errorf("finished reading CustomMessageResponse, but an "+
+			"unexpected %d bytes remain", len(data))
+	}
 	return nil
 }
 

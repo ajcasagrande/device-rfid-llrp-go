@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2021 Intel Corporation
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -505,6 +505,7 @@ const (
 	MsgCloseConnection               = MessageType(14)
 	MsgCloseConnectionResponse       = MessageType(4)
 	MsgCustomMessage                 = MessageType(1023)
+	MsgCustomMessageResponse         = MessageType(1023)
 )
 
 // GetSupportedVersion is Message 46, GetSupportedVersion.
@@ -1098,6 +1099,23 @@ type CustomMessage struct {
 // Type returns this message's MessageType
 func (*CustomMessage) Type() MessageType {
 	return MsgCustomMessage
+}
+
+// CustomMessageResponse is Message 1023, CustomMessageResponse.
+type CustomMessageResponse struct {
+	VendorID       uint32
+	MessageSubtype uint8
+	LLRPStatus     LLRPStatus
+}
+
+// Type returns this message's MessageType
+func (*CustomMessageResponse) Type() MessageType {
+	return MsgCustomMessageResponse
+}
+
+// Status returns this message's LLRPStatus
+func (m *CustomMessageResponse) Status() LLRPStatus {
+	return m.LLRPStatus
 }
 
 // AntennaID is Parameter 1, AntennaID.

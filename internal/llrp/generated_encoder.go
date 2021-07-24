@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2021 Intel Corporation
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -307,6 +307,15 @@ func (m *CustomMessage) EncodeFields(w io.Writer) error {
 	}
 	if _, err := w.Write(m.Data); err != nil {
 		return errors.Wrap(err, "failed to write Data")
+	}
+	return nil
+}
+
+// EncodeFields for Message 1023, CustomMessageResponse.
+func (m *CustomMessageResponse) EncodeFields(w io.Writer) error {
+	if _, err := w.Write([]byte{
+		byte(m.VendorID >> 24), byte(m.VendorID >> 16), byte(m.VendorID >> 8), byte(m.VendorID), m.MessageSubtype}); err != nil {
+		return errors.Wrap(err, "failed to write fields for CustomMessageResponse")
 	}
 	return nil
 }

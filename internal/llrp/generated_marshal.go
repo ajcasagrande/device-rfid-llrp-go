@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2021 Intel Corporation
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -670,6 +670,18 @@ func (m *CloseConnectionResponse) MarshalBinary() ([]byte, error) {
 func (m *CustomMessage) MarshalBinary() ([]byte, error) {
 	b := bytes.Buffer{}
 	if err := m.EncodeFields(&b); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+// MarshalBinary Message 1023, CustomMessageResponse.
+func (m *CustomMessageResponse) MarshalBinary() ([]byte, error) {
+	b := bytes.Buffer{}
+	if err := m.EncodeFields(&b); err != nil {
+		return nil, err
+	}
+	if err := encodeParams(&b, m.LLRPStatus.getHeader()); err != nil {
 		return nil, err
 	}
 	return b.Bytes(), nil

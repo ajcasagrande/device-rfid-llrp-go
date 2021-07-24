@@ -6,7 +6,6 @@
 package llrp
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -180,18 +179,15 @@ func (sim *Simulator) handleCustomMessage(td *TestDevice, msg Message) {
 		sim.Logger.Printf("Failed to unmarshal async event from LLRP. error: %v\n", err)
 		return
 	}
-	// todo: hack: we are assuming the MessageSubtype for the Response is always 1 more than the request
-	custom.MessageSubtype += 1
 
-	success := LLRPStatus{Status: StatusSuccess}
-	b := bytes.Buffer{}
-	if err := encodeParams(&b, success.getHeader()); err != nil {
-		sim.Logger.Printf("Unable to encode LLRPStatus success. error: %v", err)
-	} else {
-		custom.Data = b.Bytes()
+	resp := CustomMessageResponse{
+		VendorID:       custom.VendorID,
+		// todo: hack: we are assuming that the response to the custom message is always
+		//			   a value 1 higher than the request message's subtype.
+		MessageSubtype: custom.MessageSubtype + 1,
+		LLRPStatus:     successStatus,
 	}
-
-	td.write(msg.id, custom)
+	td.write(msg.id, &resp)
 }
 
 func (sim *Simulator) handleGetReaderConfig(td *TestDevice, msg Message) {

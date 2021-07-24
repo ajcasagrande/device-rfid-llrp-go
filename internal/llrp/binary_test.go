@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2021 Intel Corporation
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -927,6 +927,29 @@ func TestCustomMessage_roundTrip(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 	var m2 CustomMessage
+	if err := m2.UnmarshalBinary(b); err != nil {
+		t.Errorf("%+v\n%# 02x\n%+v\n%+v", err, b, m, m2)
+	}
+	if !reflect.DeepEqual(m, m2) {
+		t.Errorf("mismatch:\n%# 02x\n%+v\n%+v", b, m, m2)
+	}
+}
+
+// Test Message 1023, CustomMessageResponse.
+func TestCustomMessageResponse_roundTrip(t *testing.T) {
+	m := CustomMessageResponse{
+		VendorID:       2147483648,
+		MessageSubtype: 128,
+		LLRPStatus: LLRPStatus{
+			Status:           StatusMsgMsgUnexpected,
+			ErrorDescription: "some arbitrary string",
+		},
+	}
+	b, err := m.MarshalBinary()
+	if err != nil {
+		t.Fatalf("%+v", err)
+	}
+	var m2 CustomMessageResponse
 	if err := m2.UnmarshalBinary(b); err != nil {
 		t.Errorf("%+v\n%# 02x\n%+v\n%+v", err, b, m, m2)
 	}
