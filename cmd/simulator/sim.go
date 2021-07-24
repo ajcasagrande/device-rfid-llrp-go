@@ -16,7 +16,7 @@ import (
 func main() {
 	sim, err := llrp.CreateSimulator()
 	if err != nil {
-		fmt.Printf("Error creating simulator: %v", err)
+		fmt.Printf("Error creating simulator: %v\n", err)
 		os.Exit(1)
 	}
 

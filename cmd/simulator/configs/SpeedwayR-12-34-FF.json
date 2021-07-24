@@ -1,11 +1,4 @@
 {
-  "Silent": false,
-  "LLRPPort": 5084,
-  "AntennaCount": 4,
-  "TagPopulation": 10,
-  "BaseEPC": "301400000000000000000010",
-  "MinRSSI": -95,
-  "MaxRSSI": -55,
   "ReaderCapabilities": {
     "LLRPStatus": {
       "Status": 0,
@@ -778,7 +771,7 @@
     },
     "Identification": {
       "IDType": 0,
-      "ReaderID": "ABYl//8RJdY="
+      "ReaderID": "ABYl//8SNP8="
     },
     "AntennaProperties": [
       {
