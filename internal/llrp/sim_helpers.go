@@ -69,3 +69,32 @@ func (sim *Simulator) patchReaderConfig() {
 		sim.config.ReaderConfig.AntennaProperties[i].AntennaConnected = i < sim.flags.AntennaCount
 	}
 }
+
+func (sim *Simulator) startReading() {
+	if sim.state.reading {
+		return
+	}
+	sim.state.reading = true
+	sim.roTicker.Reset(sim.state.roInterval)
+	sim.state.ro.ROSpecCurrentState = ROSpecStateActive
+	sim.Logger.Printf("Reading is started. Interval: %v", sim.state.roInterval)
+}
+
+func (sim *Simulator) stopReading() {
+	if !sim.state.reading {
+		return
+	}
+	sim.state.reading = false
+	sim.roTicker.Stop()
+	sim.stopTicker.Stop()
+	if sim.state.ro != nil && sim.state.ro.ROSpecCurrentState == ROSpecStateActive {
+		sim.state.ro.ROSpecCurrentState = ROSpecStateInactive
+	}
+	sim.Logger.Println("Reading is stopped!")
+}
+
+func (sim *Simulator) resetToFactoryDefaults() {
+	sim.Logger.Println("Resetting to factory defaults!")
+	sim.stopReading()
+	sim.state.resetState()
+}

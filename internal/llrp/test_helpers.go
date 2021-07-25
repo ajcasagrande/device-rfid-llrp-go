@@ -113,13 +113,13 @@ func NewTestDevice(maxReaderVer, maxClientVer VersionNum, timeout time.Duration,
 
 // NewReaderOnlyTestDevice returns a TestDevice which only manages the Reader (aka Server)
 // portion of the communication, attaching to an existing net.Conn
-func NewReaderOnlyTestDevice(conn net.Conn, silent bool) (*TestDevice, error) {
+func NewReaderOnlyTestDevice(conn net.Conn, timeout time.Duration, silent bool) (*TestDevice, error) {
 	logOpt := WithStdLogger("test")
 	if silent {
 		logOpt = WithLogger(nil)
 	}
 
-	reader := NewClient(WithVersion(Version1_0_1), logOpt)
+	reader := NewClient(WithVersion(Version1_0_1), WithTimeout(timeout), logOpt)
 	reader.conn = conn
 
 	td := TestDevice{

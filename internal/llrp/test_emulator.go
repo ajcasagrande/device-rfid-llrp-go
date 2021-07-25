@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // TestEmulator acts like an LLRP server. It accepts connections on a configurable network port,
@@ -119,7 +120,7 @@ func (emu *TestEmulator) listenUntilCancelled() {
 func (emu *TestEmulator) handleNewConn(conn net.Conn) {
 	id := atomic.AddUint32(&emu.connId, 1)
 	log.Printf("handing new connection. id=%d", id)
-	td, err := NewReaderOnlyTestDevice(conn, emu.silent)
+	td, err := NewReaderOnlyTestDevice(conn, 60*time.Second, emu.silent)
 	if err != nil {
 		panic("unable to create a new ReaderOnly TestDevice: " + err.Error())
 	}
@@ -168,8 +169,14 @@ func (emu *TestEmulator) handleNewConn(conn net.Conn) {
 	log.Printf("active connection count: %d", len(emu.devices))
 	emu.devicesMu.Unlock()
 
+	// blocks until connection closed
 	td.ImpersonateReader()
+
 	log.Printf("connection id=%d ended", id)
+	emu.devicesMu.Lock()
+	delete(emu.devices, td)
+	log.Printf("active connection count: %d", len(emu.devices))
+	emu.devicesMu.Unlock()
 }
 
 // SetResponse adds a canned response to all future clients. Optionally,

@@ -69,6 +69,12 @@ type simulatorState struct {
 	ro         *ROSpec
 }
 
+func (s *simulatorState) resetState() {
+	s.ro = nil
+	s.reading = false
+	s.roInterval = time.Second / time.Duration(defaultReadRate)
+}
+
 // ConfigFlags are the command line options
 type ConfigFlags struct {
 	Filename      string
@@ -199,10 +205,7 @@ func (sim *Simulator) taskLoop() {
 		case <-sim.kaTicker.C:
 			sim.SendKeepAlive()
 		case <-sim.stopTicker.C:
-			sim.stopTicker.Stop()
-			// stop reading
-			sim.roTicker.Stop()
-			sim.state.reading = false
+			sim.stopReading()
 		}
 	}
 }

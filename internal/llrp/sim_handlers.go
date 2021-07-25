@@ -123,14 +123,14 @@ func (sim *Simulator) handleDeleteROSpec(td *TestDevice, msg Message) {
 
 // handleStartROSpec is a custom handler for the StartROSpec message type
 func (sim *Simulator) handleStartROSpec(td *TestDevice, msg Message) {
-	sim.state.reading = true
-	sim.roTicker.Reset(sim.state.roInterval)
+	sim.startReading()
 	td.write(msg.id, &StartROSpecResponse{LLRPStatus: successStatus})
 }
 
 // handleEnableROSpec is a custom handler for the EnableROSpec message type
 func (sim *Simulator) handleEnableROSpec(td *TestDevice, msg Message) {
 	ro := sim.state.ro
+	ro.ROSpecCurrentState = ROSpecStateInactive
 
 	if ro == nil {
 		// todo: better error
@@ -153,24 +153,21 @@ func (sim *Simulator) handleEnableROSpec(td *TestDevice, msg Message) {
 	sim.Logger.Printf("setting read interval to %v", sim.state.roInterval)
 
 	if ro.ROBoundarySpec.StartTrigger.Trigger == ROStartTriggerImmediate {
-		sim.roTicker.Reset(sim.state.roInterval)
+		sim.startReading()
 	}
 
 	if ro.ROBoundarySpec.StopTrigger.Trigger == ROStopTriggerDuration {
-		interval := time.Duration(ro.ROBoundarySpec.StopTrigger.DurationTriggerValue) * time.Millisecond
-		sim.Logger.Printf("Setting stop trigger interval to %v", interval)
-		sim.stopTicker.Reset(interval)
+		stopInterval := time.Duration(ro.ROBoundarySpec.StopTrigger.DurationTriggerValue) * time.Millisecond
+		sim.Logger.Printf("Setting stop trigger interval to %v", stopInterval)
+		sim.stopTicker.Reset(stopInterval)
 	}
 
-	sim.Logger.Println("Reading is enabled!")
 	td.write(msg.id, &EnableROSpecResponse{LLRPStatus: successStatus})
 }
 
 // handleStopROSpec is a custom handler for the StopROSpec message type
 func (sim *Simulator) handleStopROSpec(td *TestDevice, msg Message) {
-	sim.state.reading = false
-	sim.roTicker.Stop()
-	sim.Logger.Println("Reading is stopped!")
+	sim.stopReading()
 	td.write(msg.id, &StopROSpecResponse{LLRPStatus: successStatus})
 }
 
@@ -179,6 +176,7 @@ func (sim *Simulator) handleDisableROSpec(td *TestDevice, msg Message) {
 	sim.state.reading = false
 	sim.roTicker.Stop()
 	sim.Logger.Println("Reading is disabled!")
+
 	td.write(msg.id, &DisableROSpecResponse{LLRPStatus: successStatus})
 }
 
@@ -217,6 +215,10 @@ func (sim *Simulator) handleSetReaderConfig(td *TestDevice, msg Message) {
 	} else { // KATriggerNone
 		sim.Logger.Println("Disabling keep alive")
 		sim.kaTicker.Stop()
+	}
+
+	if cfg.ResetToFactoryDefaults {
+		sim.resetToFactoryDefaults()
 	}
 
 	td.write(msg.id, &SetReaderConfigResponse{LLRPStatus: successStatus})
