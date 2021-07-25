@@ -4,13 +4,60 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:generate python3 generate_param_code.py -i messages.yaml -s generated_structs.go -t binary_test.go -m generated_marshal.go -u generated_unmarshal.go -e generated_encoder.go
-//go:generate stringer -type=ParamType,ConnectionAttemptEventType,StatusCode,AirProtocolIDType
+//go:generate stringer -type=ParamType,ConnectionAttemptEventType,StatusCode,AirProtocolIDType,VendorIDType,ImpinjModelType
 
 package llrp
 
 import (
+	"io"
 	"strconv"
 )
+
+type CustomParam interface {
+	EncodeFields(w io.Writer) error
+	UnmarshalBinary(data []byte) error
+	getHeader() paramHeader
+}
+
+type VendorIDType uint32
+
+const (
+	Impinj = VendorIDType(25882)
+	Alien  = VendorIDType(17996)
+	Zebra  = VendorIDType(10642)
+)
+
+func (i VendorIDType) Value() uint32 {
+	return uint32(i)
+}
+
+type ImpinjModelType uint32
+
+const (
+	SpeedwayR220 = ImpinjModelType(2001001)
+	SpeedwayR420 = ImpinjModelType(2001002)
+	XPortal      = ImpinjModelType(2001003)
+	XArrayWM     = ImpinjModelType(2001004)
+	XArrayEAP    = ImpinjModelType(2001006)
+	XArray       = ImpinjModelType(2001007)
+	XSpan        = ImpinjModelType(2001008)
+	SpeedwayR120 = ImpinjModelType(2001009)
+	R700         = ImpinjModelType(2001052)
+)
+
+// HostnamePrefix will return the default hostname prefix of known Impinj readers
+func (imt ImpinjModelType) HostnamePrefix(defaultPrefix string) string {
+	switch imt {
+	case SpeedwayR120, SpeedwayR220, SpeedwayR420, R700, XPortal:
+		return "SpeedwayR"
+	case XSpan:
+		return "xSpan"
+	case XArray, XArrayEAP, XArrayWM:
+		return "xArray"
+	default:
+		return defaultPrefix
+	}
+}
 
 const (
 	paramInvalid = ParamType(0)
@@ -108,6 +155,7 @@ const (
 	ParamLoopSpec                          = ParamType(355)
 	ParamSpecLoopEvent                     = ParamType(356)
 	ParamCustom                            = ParamType(1023)
+	ParamCustomParam                       = ParamType(1023)
 
 	ParamC1G2LLRPCapabilities                        = ParamType(327)
 	ParamUHFC1G2RFModeTable                          = ParamType(328)

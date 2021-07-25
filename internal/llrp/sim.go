@@ -12,8 +12,6 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
-	"math/big"
-	"math/rand"
 	"os"
 	"time"
 )
@@ -34,26 +32,44 @@ var (
 	}
 )
 
+// HandlerCallback can be implemented to handle certain messages received from the Reader.
+// See Client.WithHandler for more information.
+type HandlerCallback interface {
+	Handle(td *TestDevice, msg Message)
+}
+
+// HandlerCallbackFunc can wrap a function so it can be used as a HandlerCallback.
+type HandlerCallbackFunc func(td *TestDevice, msg Message)
+
+// Handle implements HandlerCallback for HandlerCallbackFunc by calling the function.
+func (hcf HandlerCallbackFunc) Handle(td *TestDevice, msg Message) {
+	hcf(td, msg)
+}
+
+// Simulator struct contains the simulator config, state, and connections.
 type Simulator struct {
 	flags  ConfigFlags
 	config SimulatorConfig
 	emu    *TestEmulator
 	Logger *log.Logger
 
-	reading bool
-
-	kaTicker *time.Ticker
-	roTicker *time.Ticker
+	kaTicker   *time.Ticker
+	roTicker   *time.Ticker
+	stopTicker *time.Ticker
 
 	state *simulatorState
 
 	done chan struct{}
 }
 
+// simulatorState keeps track of the current state/configuration of the simulator
 type simulatorState struct {
-	ro *ROSpec
+	reading    bool
+	roInterval time.Duration
+	ro         *ROSpec
 }
 
+// ConfigFlags are the command line options
 type ConfigFlags struct {
 	Filename      string
 	Silent        bool
@@ -66,11 +82,13 @@ type ConfigFlags struct {
 	ReadRate      int
 }
 
+// SimulatorConfig contains the pre-defined ReaderCapabilities and ReaderConfig structs
 type SimulatorConfig struct {
 	ReaderCapabilities GetReaderCapabilitiesResponse
 	ReaderConfig       GetReaderConfigResponse
 }
 
+// parseFlags configures the command line flags and parses them into a ConfigFlags struct.
 func parseFlags() ConfigFlags {
 	var cf ConfigFlags
 
@@ -121,16 +139,18 @@ func parseFlags() ConfigFlags {
 // CreateSimulator parses config file and sets up a new simulator but does not start it
 func CreateSimulator() (*Simulator, error) {
 	sim := Simulator{
-		flags:    parseFlags(),
-		Logger:   log.Default(),
-		kaTicker: time.NewTicker(time.Hour), // bogus time since we are stopping it right away
-		roTicker: time.NewTicker(time.Hour), // bogus time since we are stopping it right away
-		state:    &simulatorState{},
-		done:     make(chan struct{}),
+		flags:      parseFlags(),
+		Logger:     log.Default(),
+		kaTicker:   newInactiveTicker(),
+		roTicker:   newInactiveTicker(),
+		stopTicker: newInactiveTicker(),
+		state:      &simulatorState{},
+		done:       make(chan struct{}),
 	}
-	// stop the tickers because they start automatically
+
 	sim.kaTicker.Stop()
 	sim.roTicker.Stop()
+	sim.stopTicker.Stop()
 
 	if sim.flags.Filename == "" {
 		return nil, fmt.Errorf("please specify filename")
@@ -145,195 +165,9 @@ func CreateSimulator() (*Simulator, error) {
 	sim.emu = NewTestEmulator(sim.flags.Silent)
 	sim.setupHandlers()
 
+	sim.patchReaderConfig()
+
 	return &sim, nil
-}
-
-func (sim *Simulator) setupHandlers() {
-	sim.emu.SetHandler(MsgGetReaderConfig, HandlerCallbackFunc(sim.handleGetReaderConfig))
-	sim.emu.SetHandler(MsgGetReaderCapabilities, HandlerCallbackFunc(sim.handleGetReaderCapabilities))
-
-	sim.emu.SetHandler(MsgAddROSpec, HandlerCallbackFunc(sim.handleAddROSpec))
-	sim.emu.SetHandler(MsgAddAccessSpec, HandlerCallbackFunc(sim.handleAddAccessSpec))
-	sim.emu.SetHandler(MsgDeleteROSpec, HandlerCallbackFunc(sim.handleDeleteROSpec))
-	sim.emu.SetHandler(MsgDeleteAccessSpec, HandlerCallbackFunc(sim.handleDeleteAccessSpec))
-	sim.emu.SetHandler(MsgEnableAccessSpec, HandlerCallbackFunc(sim.handleEnableAccessSpec))
-	sim.emu.SetHandler(MsgDisableAccessSpec, HandlerCallbackFunc(sim.handleDisableAccessSpec))
-
-	sim.emu.SetHandler(MsgSetReaderConfig, HandlerCallbackFunc(sim.handleSetReaderConfig))
-	sim.emu.SetHandler(MsgEnableROSpec, HandlerCallbackFunc(sim.handleEnableROSpec))
-	sim.emu.SetHandler(MsgDisableROSpec, HandlerCallbackFunc(sim.handleDisableROSpec))
-	sim.emu.SetHandler(MsgStartROSpec, HandlerCallbackFunc(sim.handleStartROSpec))
-	sim.emu.SetHandler(MsgStopROSpec, HandlerCallbackFunc(sim.handleStopROSpec))
-	sim.emu.SetHandler(MsgCustomMessage, HandlerCallbackFunc(sim.handleCustomMessage))
-	sim.emu.SetHandler(MsgKeepAliveAck, HandlerCallbackFunc(sim.handleKeepAliveAck))
-}
-
-func (sim *Simulator) handleKeepAliveAck(_ *TestDevice, msg Message) {
-	sim.Logger.Printf("Received KeepAliveAck mid: %v\n", msg.id)
-	// No response expected
-}
-
-func (sim *Simulator) handleCustomMessage(td *TestDevice, msg Message) {
-	custom := &CustomMessage{}
-	if err := msg.UnmarshalTo(custom); err != nil {
-		sim.Logger.Printf("Failed to unmarshal async event from LLRP. error: %v\n", err)
-		return
-	}
-
-	resp := CustomMessageResponse{
-		VendorID:       custom.VendorID,
-		// todo: hack: we are assuming that the response to the custom message is always
-		//			   a value 1 higher than the request message's subtype.
-		MessageSubtype: custom.MessageSubtype + 1,
-		LLRPStatus:     successStatus,
-	}
-	td.write(msg.id, &resp)
-}
-
-func (sim *Simulator) handleGetReaderConfig(td *TestDevice, msg Message) {
-	td.write(msg.id, &sim.config.ReaderConfig)
-}
-
-func (sim *Simulator) handleGetReaderCapabilities(td *TestDevice, msg Message) {
-	td.write(msg.id, &sim.config.ReaderCapabilities)
-}
-
-func (sim *Simulator) handleAddROSpec(td *TestDevice, msg Message) {
-	addRO := &AddROSpec{}
-	if err := msg.UnmarshalTo(addRO); err != nil {
-		sim.Logger.Printf("Failed to unmarshal async event from LLRP. error: %v\n", err)
-		return
-	}
-
-	if sim.state.ro != nil {
-		// todo: what should this return?
-		if sim.state.ro.ROSpecID == addRO.ROSpec.ROSpecID {
-			td.write(msg.id, &AddROSpecResponse{LLRPStatus: LLRPStatus{
-				Status:           StatusFieldInvalid,
-				ErrorDescription: fmt.Sprintf("ROSpec already exists with id %d", sim.state.ro.ROSpecID),
-			}})
-		} else {
-			td.write(msg.id, &AddROSpecResponse{LLRPStatus: LLRPStatus{
-				Status:           StatusFieldInvalid,
-				ErrorDescription: "Only one ROSpec supported by this device",
-			}})
-		}
-		return
-	}
-
-	sim.state.ro = &addRO.ROSpec
-	td.write(msg.id, &AddROSpecResponse{LLRPStatus: successStatus})
-}
-
-func (sim *Simulator) handleDeleteROSpec(td *TestDevice, msg Message) {
-	delRO := &DeleteROSpec{}
-	if err := msg.UnmarshalTo(delRO); err != nil {
-		sim.Logger.Printf("Failed to unmarshal async event from LLRP. error: %v\n", err)
-		return
-	}
-
-	if sim.state.ro != nil && sim.state.ro.ROSpecID == delRO.ROSpecID {
-		// todo: what should this return?
-		td.write(msg.id, &DeleteROSpecResponse{LLRPStatus: LLRPStatus{
-			Status:           StatusFieldInvalid,
-			ErrorDescription: fmt.Sprintf("Missing ROSpec with id %d", delRO.ROSpecID),
-		}})
-		return
-	}
-
-	// remove roSpec
-	sim.state.ro = nil
-
-	td.write(msg.id, &DeleteROSpecResponse{LLRPStatus: successStatus})
-}
-
-func (sim *Simulator) handleStartROSpec(td *TestDevice, msg Message) {
-	sim.reading = true
-	td.write(msg.id, &StartROSpecResponse{LLRPStatus: successStatus})
-}
-
-func (sim *Simulator) handleEnableROSpec(td *TestDevice, msg Message) {
-	sim.reading = true
-	ro := sim.state.ro
-
-	interval := time.Second / time.Duration(sim.flags.ReadRate)
-
-	if ro != nil && ro.ROReportSpec != nil {
-		switch ro.ROReportSpec.Trigger {
-		case NSecondsOrAIEnd, NSecondsOrROEnd:
-			interval = time.Duration(ro.ROReportSpec.N) * time.Second
-		case NMillisOrAIEnd, NMillisOrROEnd:
-			interval = time.Duration(ro.ROReportSpec.N) * time.Millisecond
-		}
-	}
-
-	sim.Logger.Printf("setting read interval to %v", interval)
-	sim.roTicker.Reset(interval)
-	sim.Logger.Println("Reading is enabled!")
-	td.write(msg.id, &EnableROSpecResponse{LLRPStatus: successStatus})
-}
-
-func (sim *Simulator) handleStopROSpec(td *TestDevice, msg Message) {
-	sim.reading = false
-	sim.roTicker.Stop()
-	sim.Logger.Println("Reading is stopped!")
-	td.write(msg.id, &StopROSpecResponse{LLRPStatus: successStatus})
-}
-
-func (sim *Simulator) handleDisableROSpec(td *TestDevice, msg Message) {
-	sim.reading = false
-	sim.roTicker.Stop()
-	sim.Logger.Println("Reading is disabled!")
-	td.write(msg.id, &DisableROSpecResponse{LLRPStatus: successStatus})
-}
-
-func (sim *Simulator) handleAddAccessSpec(td *TestDevice, msg Message) {
-	td.write(msg.id, &AddAccessSpecResponse{LLRPStatus: successStatus})
-}
-
-func (sim *Simulator) handleEnableAccessSpec(td *TestDevice, msg Message) {
-	td.write(msg.id, &EnableAccessSpecResponse{LLRPStatus: successStatus})
-}
-
-func (sim *Simulator) handleDisableAccessSpec(td *TestDevice, msg Message) {
-	td.write(msg.id, &DisableAccessSpecResponse{LLRPStatus: successStatus})
-}
-
-func (sim *Simulator) handleDeleteAccessSpec(td *TestDevice, msg Message) {
-	td.write(msg.id, &DeleteAccessSpecResponse{LLRPStatus: successStatus})
-}
-
-func (sim *Simulator) handleSetReaderConfig(td *TestDevice, msg Message) {
-	cfg := &SetReaderConfig{}
-	if err := msg.UnmarshalTo(cfg); err != nil {
-		sim.Logger.Printf("Failed to unmarshal async event from LLRP. error: %v\n", err)
-		return
-	}
-
-	if cfg.KeepAliveSpec != nil && cfg.KeepAliveSpec.Trigger == KATriggerPeriodic {
-		dur := time.Duration(cfg.KeepAliveSpec.Interval) * time.Millisecond
-		sim.Logger.Printf("Setting keep alive duration to %v\n", dur)
-		sim.kaTicker.Reset(dur)
-	} else { // KATriggerNone
-		sim.Logger.Println("Disabling keep alive")
-		sim.kaTicker.Stop()
-	}
-
-	td.write(msg.id, &SetReaderConfigResponse{LLRPStatus: successStatus})
-}
-
-// HandlerCallback can be implemented to handle certain messages received from the Reader.
-// See Client.WithHandler for more information.
-type HandlerCallback interface {
-	Handle(td *TestDevice, msg Message)
-}
-
-// HandlerCallbackFunc can wrap a function so it can be used as a HandlerCallback.
-type HandlerCallbackFunc func(td *TestDevice, msg Message)
-
-// Handle implements HandlerCallback for HandlerCallbackFunc by calling the function.
-func (hcf HandlerCallbackFunc) Handle(td *TestDevice, msg Message) {
-	hcf(td, msg)
 }
 
 // StartAsync starts processing llrp messages async
@@ -349,16 +183,26 @@ func (sim *Simulator) StartAsync() error {
 	return nil
 }
 
+// taskLoop is the main event handling forever loop of the simulator. It listens to the various
+// channels to know when to perform actions such as sending tag data, sending keepalives, etc.
 func (sim *Simulator) taskLoop() {
 	for {
 		select {
-		case <-sim.done:
+		case _, err := <-sim.done:
 			sim.Logger.Println("Simulator task loop exiting.")
+			if err {
+				sim.Logger.Printf("Error occurred on done channel: error: %v", err)
+			}
 			return
 		case <-sim.roTicker.C:
 			sim.SendTagData()
 		case <-sim.kaTicker.C:
 			sim.SendKeepAlive()
+		case <-sim.stopTicker.C:
+			sim.stopTicker.Stop()
+			// stop reading
+			sim.roTicker.Stop()
+			sim.state.reading = false
 		}
 	}
 }
@@ -371,6 +215,7 @@ func (sim *Simulator) Shutdown() error {
 	return sim.emu.Shutdown()
 }
 
+// loadConfig reads the json configuration file
 func (sim *Simulator) loadConfig() error {
 	f, err := os.Open(sim.flags.Filename)
 	if err != nil {
@@ -391,41 +236,15 @@ func (sim *Simulator) loadConfig() error {
 	return nil
 }
 
-// randomRSSI generates a pseudo-random *PeakRSSI integer between [min, max]
-func randomRSSI(min, max int) *PeakRSSI {
-	rssi := PeakRSSI(int(rand.Float64()*float64(max-min)) + min)
-	return &rssi
-}
-
-// randomAntennaID generates a pseudo-random *AntennaID uint between [1, antennaCount+1]
-func randomAntennaID(antennaCount int) *AntennaID {
-	ant := AntennaID(rand.Intn(antennaCount) + 1) // antennas are 1-based
-	return &ant
-}
-
-// lastSeenPtr converts a time.Time into a *LastSeenUTC (microseconds since epoch)
-func lastSeenPtr(tm time.Time) *LastSeenUTC {
-	tm2 := LastSeenUTC(tm.UnixNano() / 1e3)
-	return &tm2
-}
-
-// randomEPC generates a new pseudo-random EPC between [baseEPC, baseEPC+tagPopulation)
-func randomEPC(baseEPC string, tagPopulation int) *big.Int {
-	epc := new(big.Int)
-	// parse baseEPC into a big Int
-	epc.SetString(baseEPC, 16)
-	// add a pseudo-random offset between [0, tagPopulation)
-	epc.Add(epc, big.NewInt(int64(rand.Intn(tagPopulation))))
-	return epc
-}
-
 // SendTagData generates a new ROAccessReport using random data and sends it via llrp
 func (sim *Simulator) SendTagData() {
-	if !sim.reading {
+	if !sim.state.reading {
 		return
 	}
 
 	epc := randomEPC(sim.flags.BaseEPC, sim.flags.TagPopulation)
+
+	rssi := randomRSSI(sim.flags.MinRSSI, sim.flags.MaxRSSI)
 
 	data := &ROAccessReport{TagReportData: []TagReportData{
 		{
@@ -433,8 +252,12 @@ func (sim *Simulator) SendTagData() {
 				EPC: epc.Bytes(),
 			},
 			AntennaID:   randomAntennaID(sim.flags.AntennaCount),
-			PeakRSSI:    randomRSSI(sim.flags.MinRSSI, sim.flags.MaxRSSI),
+			PeakRSSI:    rssi,
 			LastSeenUTC: lastSeenPtr(time.Now()),
+			Custom: []Custom{
+				// ImpinjPeakRSSI
+				impinjCustom(57, int16ToBytes(int16(*rssi)*100)),
+			},
 		},
 	}}
 
@@ -448,6 +271,7 @@ func (sim *Simulator) SendTagData() {
 	sim.emu.devicesMu.Unlock()
 }
 
+// SendKeepAlive sends a KeepAlive message to all connected clients
 func (sim *Simulator) SendKeepAlive() {
 	ka := &KeepAlive{}
 

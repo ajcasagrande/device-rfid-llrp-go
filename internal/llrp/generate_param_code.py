@@ -894,7 +894,7 @@ class Container:
 
     @property
     def const_name(self) -> str:
-        return f'Param{self.name}'
+        return f'Param{self.name if self.type_id != 1023 else "Custom"}'
 
     def empty(self) -> bool:
         """Returns True if this doesn't have any fields or parameters."""

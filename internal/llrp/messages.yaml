@@ -1768,6 +1768,16 @@ parameters:
         type: '[]byte'
         length: -1  # all remaining data
 
+  - name: ImpinjPeakRSSI
+    type_id: 1023
+    fields:
+      - name: VendorID
+        type: uint32
+      - name: Subtype
+        type: uint32
+      - name: RSSI
+        type: int16
+
 types:
   # ----- aliases ------
   - name: AntennaID
