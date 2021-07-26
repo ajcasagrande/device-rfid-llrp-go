@@ -38,7 +38,7 @@ func (sim *Simulator) setupHandlers() {
 
 // handleKeepAliveAck is a custom handler for the KeepAliveAck message type
 func (sim *Simulator) handleKeepAliveAck(_ *TestDevice, msg Message) {
-	sim.Logger.Printf("Received KeepAliveAck mid: %v\n", msg.id)
+	sim.Logger.Printf("Received KeepAliveAck messageID: %v\n", msg.id)
 	// No response expected
 }
 
@@ -94,6 +94,11 @@ func (sim *Simulator) handleAddROSpec(td *TestDevice, msg Message) {
 		return
 	}
 
+	if addRO.ROSpec.ROReportSpec != nil {
+		sim.Logger.Printf("addRo ROReportSpec: %+v", addRO.ROSpec.ROReportSpec)
+	}
+	sim.Logger.Printf("addROSpec: id=%d", addRO.ROSpec.ROSpecID)
+
 	sim.state.ro = &addRO.ROSpec
 	td.write(msg.id, &AddROSpecResponse{LLRPStatus: successStatus})
 }
@@ -105,6 +110,9 @@ func (sim *Simulator) handleDeleteROSpec(td *TestDevice, msg Message) {
 		sim.Logger.Printf("Failed to unmarshal async event from LLRP. error: %v\n", err)
 		return
 	}
+
+	// todo: id=0 means all?
+	sim.Logger.Printf("delROSpec: id=%d", delRO.ROSpecID)
 
 	if sim.state.ro != nil && sim.state.ro.ROSpecID == delRO.ROSpecID {
 		// todo: what should this return?

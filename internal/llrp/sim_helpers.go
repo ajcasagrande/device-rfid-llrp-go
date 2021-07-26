@@ -48,12 +48,15 @@ func randomEPC(baseEPC string, tagPopulation int) *big.Int {
 	return epc
 }
 
+// int16ToBytes converts a 16-bit int to a 2-byte []byte
 func int16ToBytes(i int16) []byte {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b, uint16(i))
 	return b
 }
 
+// impinjCustom is a shorthand function to create a Custom message param for a specified
+// subtype and the binary value.
 func impinjCustom(subtype uint32, data []byte) Custom {
 	return Custom{
 		VendorID: Impinj.Value(),
@@ -70,6 +73,8 @@ func (sim *Simulator) patchReaderConfig() {
 	}
 }
 
+// startReading is an internal call used to activate an ROSpec at the pre-configure interval
+// and update our internal states.
 func (sim *Simulator) startReading() {
 	if sim.state.reading {
 		return
@@ -80,6 +85,8 @@ func (sim *Simulator) startReading() {
 	sim.Logger.Printf("Reading is started. Interval: %v", sim.state.roInterval)
 }
 
+// stopReading is an internal call used to de-activate an ROSpec, turn off the tickers,
+// and update our internal states.
 func (sim *Simulator) stopReading() {
 	if !sim.state.reading {
 		return
@@ -87,6 +94,7 @@ func (sim *Simulator) stopReading() {
 	sim.state.reading = false
 	sim.roTicker.Stop()
 	sim.stopTicker.Stop()
+	// if we are Active, set to Inactive, otherwise leave alone
 	if sim.state.ro != nil && sim.state.ro.ROSpecCurrentState == ROSpecStateActive {
 		sim.state.ro.ROSpecCurrentState = ROSpecStateInactive
 	}

@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,7 @@ const (
 	defaultReadRate      = 100
 	defaultAntennaCount  = 2
 	defaultPort          = 5084
+	defaultAPIPort       = 55084
 	defaultTagPopulation = 20
 	defaultMinRSSI       = -80 // -95
 	defaultMaxRSSI       = -60 // -55
@@ -59,6 +61,8 @@ type Simulator struct {
 
 	state *simulatorState
 
+	flagUpdateCh chan ConfigFlags
+
 	done chan struct{}
 }
 
@@ -77,15 +81,16 @@ func (s *simulatorState) resetState() {
 
 // ConfigFlags are the command line options
 type ConfigFlags struct {
-	Filename      string
-	Silent        bool
-	LLRPPort      int
-	AntennaCount  int
-	TagPopulation int
-	BaseEPC       string
-	MaxRSSI       int
-	MinRSSI       int
-	ReadRate      int
+	Filename      string `json:"filename,omitempty"`
+	Silent        bool   `json:"silent,omitempty"`
+	LLRPPort      int    `json:"llrp_port,omitempty"`
+	APIPort       int    `json:"api_port,omitempty"`
+	AntennaCount  int    `json:"antenna_count,omitempty"`
+	TagPopulation int    `json:"tag_population,omitempty"`
+	BaseEPC       string `json:"base_epc,omitempty"`
+	MaxRSSI       int    `json:"max_rssi,omitempty"`
+	MinRSSI       int    `json:"min_rssi,omitempty"`
+	ReadRate      int    `json:"read_rate,omitempty"`
 }
 
 // SimulatorConfig contains the pre-defined ReaderCapabilities and ReaderConfig structs
@@ -103,6 +108,10 @@ func parseFlags() ConfigFlags {
 
 	flag.IntVar(&cf.LLRPPort, "p", defaultPort, "llrp port")
 	flag.IntVar(&cf.LLRPPort, "port", defaultPort, "llrp port")
+	flag.IntVar(&cf.LLRPPort, "llrp-port", defaultPort, "llrp port")
+
+	flag.IntVar(&cf.APIPort, "P", defaultAPIPort, "api port")
+	flag.IntVar(&cf.APIPort, "api-port", defaultAPIPort, "api port")
 
 	flag.IntVar(&cf.AntennaCount, "a", defaultAntennaCount, "antenna count")
 	flag.IntVar(&cf.AntennaCount, "antenna-count", defaultAntennaCount, "antenna count")
@@ -145,13 +154,14 @@ func parseFlags() ConfigFlags {
 // CreateSimulator parses config file and sets up a new simulator but does not start it
 func CreateSimulator() (*Simulator, error) {
 	sim := Simulator{
-		flags:      parseFlags(),
-		Logger:     log.Default(),
-		kaTicker:   newInactiveTicker(),
-		roTicker:   newInactiveTicker(),
-		stopTicker: newInactiveTicker(),
-		state:      &simulatorState{},
-		done:       make(chan struct{}),
+		flags:        parseFlags(),
+		Logger:       log.Default(),
+		kaTicker:     newInactiveTicker(),
+		roTicker:     newInactiveTicker(),
+		stopTicker:   newInactiveTicker(),
+		state:        &simulatorState{},
+		flagUpdateCh: make(chan ConfigFlags, 10),
+		done:         make(chan struct{}),
 	}
 
 	sim.kaTicker.Stop()
@@ -184,8 +194,22 @@ func (sim *Simulator) StartAsync() error {
 		return err
 	}
 
-	go sim.taskLoop()
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
 
+	go func() {
+		defer wg.Done()
+		sim.setupAPIRoutes()
+		sim.serveAPI()
+	}()
+
+	go func() {
+		defer wg.Done()
+		sim.taskLoop()
+	}()
+
+	// wait for graceful shutdowns
+	wg.Wait()
 	return nil
 }
 
@@ -194,11 +218,8 @@ func (sim *Simulator) StartAsync() error {
 func (sim *Simulator) taskLoop() {
 	for {
 		select {
-		case _, err := <-sim.done:
+		case <-sim.done:
 			sim.Logger.Println("Simulator task loop exiting.")
-			if err {
-				sim.Logger.Printf("Error occurred on done channel: error: %v", err)
-			}
 			return
 		case <-sim.roTicker.C:
 			sim.SendTagData()
@@ -206,6 +227,32 @@ func (sim *Simulator) taskLoop() {
 			sim.SendKeepAlive()
 		case <-sim.stopTicker.C:
 			sim.stopReading()
+		case f := <-sim.flagUpdateCh:
+			// dynamically update config. because we handle everything in this taskLoop there is
+			// no need to lock the config using a mutex
+			if f.ReadRate != 0 {
+				sim.flags.ReadRate = f.ReadRate
+				sim.state.roInterval = time.Second / time.Duration(sim.flags.ReadRate)
+				sim.Logger.Printf("setting read interval to %v", sim.state.roInterval)
+				if sim.state.reading {
+					sim.roTicker.Reset(sim.state.roInterval)
+				}
+			}
+			if f.AntennaCount != 0 {
+				sim.flags.AntennaCount = f.AntennaCount
+			}
+			if f.TagPopulation != 0 {
+				sim.flags.TagPopulation = f.TagPopulation
+			}
+			if f.BaseEPC != "" {
+				sim.flags.BaseEPC = f.BaseEPC
+			}
+			if f.MinRSSI != 0 {
+				sim.flags.MinRSSI = f.MinRSSI
+			}
+			if f.MaxRSSI != 0 {
+				sim.flags.MaxRSSI = f.MaxRSSI
+			}
 		}
 	}
 }
@@ -258,6 +305,7 @@ func (sim *Simulator) SendTagData() {
 			PeakRSSI:    rssi,
 			LastSeenUTC: lastSeenPtr(time.Now()),
 			Custom: []Custom{
+				// todo: only send if enabled via ImpinjCustom
 				// ImpinjPeakRSSI
 				impinjCustom(57, int16ToBytes(int16(*rssi)*100)),
 			},
