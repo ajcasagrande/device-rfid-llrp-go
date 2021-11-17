@@ -50,6 +50,11 @@ func (sim *Simulator) handleCustomMessage(td *TestDevice, msg Message) {
 		return
 	}
 
+	if custom.VendorID == uint32(Impinj) {
+		sim.Logger.Printf("Received Custom Message: %s",
+			ImpinjCustomMessageType(custom.MessageSubtype).String())
+	}
+
 	resp := CustomMessageResponse{
 		VendorID: custom.VendorID,
 		// todo: hack: we are assuming that the response to the custom message is always
@@ -96,6 +101,12 @@ func (sim *Simulator) handleAddROSpec(td *TestDevice, msg Message) {
 
 	if addRO.ROSpec.ROReportSpec != nil {
 		sim.Logger.Printf("addRo ROReportSpec: %+v", addRO.ROSpec.ROReportSpec)
+		for _, c := range addRO.ROSpec.ROReportSpec.Custom {
+			if c.VendorID == Impinj.Value() &&
+				c.Subtype == uint32(ParamImpinjTagReportContentSelector) {
+				sim.Logger.Printf("ImpinjTagReportContentSelector: %+v", c)
+			}
+		}
 	}
 	sim.Logger.Printf("addROSpec: id=%d", addRO.ROSpec.ROSpecID)
 

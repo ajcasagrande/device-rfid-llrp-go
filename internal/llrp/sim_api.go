@@ -32,7 +32,7 @@ func (sim *Simulator) serveAPI() {
 		}
 	}()
 
-	sim.Logger.Printf("Serving API on port %d", sim.flags.APIPort)
+	sim.Logger.Printf("Serving API @ http://localhost:%d", sim.flags.APIPort)
 
 	// wait for done signal
 	<-sim.done
@@ -59,7 +59,7 @@ func (sim *Simulator) apiConfigHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := ConfigFlags{}
+	cfg := SimulatorConfigFlags{}
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		msg := fmt.Sprintf("Failed to unmarshal config data json: %v", err)
 		sim.Logger.Println(msg)

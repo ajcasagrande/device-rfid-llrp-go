@@ -7,7 +7,6 @@ package llrp
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/pkg/errors"
 	"io/ioutil"
@@ -50,7 +49,7 @@ func (hcf HandlerCallbackFunc) Handle(td *TestDevice, msg Message) {
 
 // Simulator struct contains the simulator config, state, and connections.
 type Simulator struct {
-	flags  ConfigFlags
+	flags  SimulatorConfigFlags
 	config SimulatorConfig
 	emu    *TestEmulator
 	Logger *log.Logger
@@ -61,7 +60,7 @@ type Simulator struct {
 
 	state *simulatorState
 
-	flagUpdateCh chan ConfigFlags
+	flagUpdateCh chan SimulatorConfigFlags
 
 	done chan struct{}
 }
@@ -79,8 +78,8 @@ func (s *simulatorState) resetState() {
 	s.roInterval = time.Second / time.Duration(defaultReadRate)
 }
 
-// ConfigFlags are the command line options
-type ConfigFlags struct {
+// SimulatorConfigFlags are the command line options
+type SimulatorConfigFlags struct {
 	Filename      string `json:"filename,omitempty"`
 	Silent        bool   `json:"silent,omitempty"`
 	LLRPPort      int    `json:"llrp_port,omitempty"`
@@ -93,88 +92,52 @@ type ConfigFlags struct {
 	ReadRate      int    `json:"read_rate,omitempty"`
 }
 
+// NewSimulatorConfigFlags creates a new SimulatorConfigFlags struct with the default values loaded
+func NewSimulatorConfigFlags() SimulatorConfigFlags {
+	return SimulatorConfigFlags{
+		Filename:      "",
+		Silent:        false,
+		LLRPPort:      defaultPort,
+		APIPort:       defaultAPIPort,
+		AntennaCount:  defaultAntennaCount,
+		TagPopulation: defaultTagPopulation,
+		BaseEPC:       defaultBaseEPC,
+		MaxRSSI:       defaultMaxRSSI,
+		MinRSSI:       defaultMinRSSI,
+		ReadRate:      defaultReadRate,
+	}
+}
+
 // SimulatorConfig contains the pre-defined ReaderCapabilities and ReaderConfig structs
 type SimulatorConfig struct {
 	ReaderCapabilities GetReaderCapabilitiesResponse
 	ReaderConfig       GetReaderConfigResponse
 }
 
-// parseFlags configures the command line flags and parses them into a ConfigFlags struct.
-func parseFlags() ConfigFlags {
-	var cf ConfigFlags
-
-	flag.BoolVar(&cf.Silent, "s", false, "silent")
-	flag.BoolVar(&cf.Silent, "silent", false, "silent")
-
-	flag.IntVar(&cf.LLRPPort, "p", defaultPort, "llrp port")
-	flag.IntVar(&cf.LLRPPort, "port", defaultPort, "llrp port")
-	flag.IntVar(&cf.LLRPPort, "llrp-port", defaultPort, "llrp port")
-
-	flag.IntVar(&cf.APIPort, "P", defaultAPIPort, "api port")
-	flag.IntVar(&cf.APIPort, "api-port", defaultAPIPort, "api port")
-
-	flag.IntVar(&cf.AntennaCount, "a", defaultAntennaCount, "antenna count")
-	flag.IntVar(&cf.AntennaCount, "antenna-count", defaultAntennaCount, "antenna count")
-
-	flag.IntVar(&cf.TagPopulation, "t", defaultTagPopulation, "tag population count")
-	flag.IntVar(&cf.TagPopulation, "tags", defaultTagPopulation, "tag population count")
-	flag.IntVar(&cf.TagPopulation, "tag-population", defaultTagPopulation, "tag population count")
-
-	flag.StringVar(&cf.BaseEPC, "e", defaultBaseEPC, "Base EPC")
-	flag.StringVar(&cf.BaseEPC, "epc", defaultBaseEPC, "Base EPC")
-	flag.StringVar(&cf.BaseEPC, "base-epc", defaultBaseEPC, "Base EPC")
-
-	flag.IntVar(&cf.MaxRSSI, "M", defaultMaxRSSI, "max rssi")
-	flag.IntVar(&cf.MaxRSSI, "max", defaultMaxRSSI, "max rssi")
-	flag.IntVar(&cf.MaxRSSI, "max-rssi", defaultMaxRSSI, "max rssi")
-
-	flag.IntVar(&cf.MinRSSI, "m", defaultMinRSSI, "min rssi")
-	flag.IntVar(&cf.MinRSSI, "min", defaultMinRSSI, "min rssi")
-	flag.IntVar(&cf.MinRSSI, "min-rssi", defaultMinRSSI, "min rssi")
-
-	flag.StringVar(&cf.Filename, "f", "", "config filename")
-	flag.StringVar(&cf.Filename, "file", "", "config filename")
-
-	flag.IntVar(&cf.ReadRate, "r", defaultReadRate, "read rate (tags/s)")
-	flag.IntVar(&cf.ReadRate, "rate", defaultReadRate, "read rate (tags/s)")
-	flag.IntVar(&cf.ReadRate, "read-rate", defaultReadRate, "read rate (tags/s)")
-
-	flag.Parse()
-
-	if cf.Filename == "" {
-		fmt.Printf("Missing required argument -f/--file\n")
-		os.Exit(2)
-	}
-
-	log.Printf("flags: %+v", cf)
-
-	return cf
-}
-
-// CreateSimulator parses config file and sets up a new simulator but does not start it
-func CreateSimulator() (*Simulator, error) {
-	sim := Simulator{
-		flags:        parseFlags(),
+// NewSimulator returns a new un-initialized Simulator without any configuration. Initialize() must
+// be called on the returned Simulator.
+func NewSimulator() *Simulator {
+	return &Simulator{
 		Logger:       log.Default(),
 		kaTicker:     newInactiveTicker(),
 		roTicker:     newInactiveTicker(),
 		stopTicker:   newInactiveTicker(),
 		state:        &simulatorState{},
-		flagUpdateCh: make(chan ConfigFlags, 10),
+		flagUpdateCh: make(chan SimulatorConfigFlags, 2),
 		done:         make(chan struct{}),
 	}
+}
 
-	sim.kaTicker.Stop()
-	sim.roTicker.Stop()
-	sim.stopTicker.Stop()
-
+// Initialize parses config file and initializes the simulator but does not start it.
+func (sim *Simulator) Initialize(flags SimulatorConfigFlags) error {
+	sim.flags = flags
 	if sim.flags.Filename == "" {
-		return nil, fmt.Errorf("please specify filename")
+		return fmt.Errorf("please specify filename")
 	}
 
 	sim.Logger.Printf("Loading simulator config from '%s'", sim.flags.Filename)
 	if err := sim.loadConfig(); err != nil {
-		return nil, err
+		return err
 	}
 	sim.Logger.Println("Successfully loaded simulator config.")
 
@@ -183,7 +146,7 @@ func CreateSimulator() (*Simulator, error) {
 
 	sim.patchReaderConfig()
 
-	return &sim, nil
+	return nil
 }
 
 // StartAsync starts processing llrp messages async
@@ -305,9 +268,9 @@ func (sim *Simulator) SendTagData() {
 			PeakRSSI:    rssi,
 			LastSeenUTC: lastSeenPtr(time.Now()),
 			Custom: []Custom{
-				// todo: only send if enabled via ImpinjCustom
+				// todo: only send if enabled via ImpinjCustom and roSpec tag report properties
 				// ImpinjPeakRSSI
-				impinjCustom(57, int16ToBytes(int16(*rssi)*100)),
+				impinjCustom(ParamImpinjPeakRSSI, int16ToBytes(int16(*rssi)*100)),
 			},
 		},
 	}}

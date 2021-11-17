@@ -72,8 +72,8 @@ func TestAutoDiscoverNaming(t *testing.T) {
 				ReaderID: []byte{0x00, 0x00, 0x00, 0x00, 0x19, 0xC5, 0xD6},
 			},
 			caps: llrp.GeneralDeviceCapabilities{
-				DeviceManufacturer: uint32(Impinj),
-				Model:              uint32(SpeedwayR420),
+				DeviceManufacturer: uint32(llrp.Impinj),
+				Model:              uint32(llrp.SpeedwayR420),
 				FirmwareVersion:    "5.14.0.240",
 			},
 		},
@@ -85,8 +85,8 @@ func TestAutoDiscoverNaming(t *testing.T) {
 				ReaderID: []byte{0x00, 0x00, 0x00, 0x00, 0x25, 0x9C, 0xD4},
 			},
 			caps: llrp.GeneralDeviceCapabilities{
-				DeviceManufacturer: uint32(Impinj),
-				Model:              uint32(XArray),
+				DeviceManufacturer: uint32(llrp.Impinj),
+				Model:              uint32(llrp.XArray),
 				FirmwareVersion:    "5.14.0.240",
 			},
 		},
@@ -98,7 +98,7 @@ func TestAutoDiscoverNaming(t *testing.T) {
 				ReaderID: []byte{0x00, 0x00, 0x00, 0x00, 0xD2, 0x7F, 0xA1},
 			},
 			caps: llrp.GeneralDeviceCapabilities{
-				DeviceManufacturer: uint32(Impinj),
+				DeviceManufacturer: uint32(llrp.Impinj),
 				Model:              uint32(0x32), // unknown model
 				FirmwareVersion:    "7.0.0",
 			},
@@ -111,7 +111,7 @@ func TestAutoDiscoverNaming(t *testing.T) {
 				ReaderID: []byte{0x30, 0x24, 0x11, 0xF9, 0xC9, 0x2D, 0x4F},
 			},
 			caps: llrp.GeneralDeviceCapabilities{
-				DeviceManufacturer: uint32(Impinj),
+				DeviceManufacturer: uint32(llrp.Impinj),
 				Model:              uint32(0x32), // unknown model
 				FirmwareVersion:    "7.0.0",
 			},
@@ -243,8 +243,8 @@ func TestAutoDiscover(t *testing.T) {
 			MaxSupportedAntennas:    4,
 			CanSetAntennaProperties: false,
 			HasUTCClock:             true,
-			DeviceManufacturer:      uint32(Impinj),
-			Model:                   uint32(SpeedwayR420),
+			DeviceManufacturer:      uint32(llrp.Impinj),
+			Model:                   uint32(llrp.SpeedwayR420),
 			FirmwareVersion:         "5.14.0.240",
 		},
 	}

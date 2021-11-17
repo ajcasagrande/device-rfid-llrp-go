@@ -913,7 +913,7 @@ func (d *Driver) registerDevice(discovered dsModels.DiscoveredDevice) (id string
 	// Note: This is a bit of a workaround based on provision watcher logic. It was only left
 	// this way (as opposed to a total refactor) in order to allow a smooth transition
 	// back to provision watchers once the assortment of bugs have been fixed.
-	if discovered.Protocols["tcp"]["vendorPEN"] == strconv.FormatUint(uint64(Impinj), 10) {
+	if discovered.Protocols["tcp"]["vendorPEN"] == strconv.FormatUint(uint64(llrp.Impinj), 10) {
 		profile = ImpinjDeviceProfile
 	}
 	// remove the field as it is no longer needed/useful

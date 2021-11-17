@@ -127,16 +127,10 @@ func (emu *TestEmulator) handleNewConn(conn net.Conn) {
 
 	emu.devicesMu.Lock()
 	if len(emu.devices) > 0 {
-		// todo: we might have a connection leak somewhere, so this code causes issues if we are disconnected
-		// 		 abruptly and client attempts to reconnect
-		// todo note: I think there may not be a connection leak, but actually a bug with one
-		//			  or both of the services where the reader gets put in a DISABLED state and not
-		//			  reset back to ENABLED, or the inventory service is not listening for when these
-		//			  events occur.
 		log.Printf("error, already connected to another client. active connection count: %d", len(emu.devices))
 		td.write(td.nextMessageId(), NewConnectMessage(ConnExistsClientInitiated))
-		// Note: not calling td.Close directly because that will send a ConnectionClose event
-		// 		 that we do NOT want.
+		// Note: Wae are NOT calling td.Close() directly because that will send a ConnectionClose event
+		// 		 that we do not want (since we are not actually "connected")
 		_ = td.reader.Close()
 		_ = td.rConn.Close()
 		emu.devicesMu.Unlock()

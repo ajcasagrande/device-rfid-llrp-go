@@ -16,7 +16,7 @@ import (
 // ticker.Reset(duration) on the returned ticker.
 func newInactiveTicker() *time.Ticker {
 	t := time.NewTicker(time.Hour) // bogus time since we are stopping it right away
-	t.Stop() // stop the tickers because they start automatically
+	t.Stop()                       // stop the tickers because they start automatically
 	return t
 }
 
@@ -57,10 +57,10 @@ func int16ToBytes(i int16) []byte {
 
 // impinjCustom is a shorthand function to create a Custom message param for a specified
 // subtype and the binary value.
-func impinjCustom(subtype uint32, data []byte) Custom {
+func impinjCustom(subtype ImpinjCustomParamType, data []byte) Custom {
 	return Custom{
-		VendorID: Impinj.Value(),
-		Subtype:  subtype,
+		VendorID: uint32(Impinj),
+		Subtype:  uint32(subtype),
 		Data:     data,
 	}
 }

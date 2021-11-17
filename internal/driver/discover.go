@@ -410,8 +410,8 @@ func probe(host, port string, timeout time.Duration) (*discoveryInfo, error) {
 	}
 
 	prefix := DefaultDevicePrefix
-	if VendorIDType(info.vendor) == Impinj {
-		prefix = ImpinjModelType(info.model).HostnamePrefix()
+	if llrp.VendorIDType(info.vendor) == llrp.Impinj {
+		prefix = llrp.ImpinjModelType(info.model).HostnamePrefix(prefix)
 	}
 
 	var suffix string
@@ -480,9 +480,9 @@ func newDiscoveredDevice(info *discoveryInfo) dsModels.DiscoveredDevice {
 		"RFID",
 		"LLRP",
 	}
-	if VendorIDType(info.vendor) == Impinj {
-		labels = append(labels, Impinj.String())
-		modelStr := ImpinjModelType(info.model).String()
+	if llrp.VendorIDType(info.vendor) == llrp.Impinj {
+		labels = append(labels, llrp.Impinj.String())
+		modelStr := llrp.ImpinjModelType(info.model).String()
 		// only add the label if we know the model
 		if !strings.HasPrefix(modelStr, "ImpinjModelType(") {
 			labels = append(labels, modelStr)
