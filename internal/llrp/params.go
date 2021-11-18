@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:generate python3 generate_param_code.py -i messages.yaml -s generated_structs.go -t binary_test.go -m generated_marshal.go -u generated_unmarshal.go -e generated_encoder.go
-//go:generate stringer -type=ParamType,ConnectionAttemptEventType,StatusCode,AirProtocolIDType,VendorIDType,ImpinjModelType
+//go:generate stringer -type=ParamType,ConnectionAttemptEventType,StatusCode,AirProtocolIDType,VendorIDType,ImpinjModelType,ZebraModelType
 
 package llrp
 
@@ -24,7 +24,9 @@ type VendorIDType uint32
 const (
 	Impinj = VendorIDType(25882)
 	Alien  = VendorIDType(17996)
-	Zebra  = VendorIDType(10642)
+
+	// Zebra bought Motorola RFID department and IP
+	Zebra = VendorIDType(161)
 )
 
 func (i VendorIDType) Value() uint32 {
@@ -45,9 +47,26 @@ const (
 	R700         = ImpinjModelType(2001052)
 )
 
+type ZebraModelType uint32
+
+const (
+	FX9600_4 = ZebraModelType(96004) // FX9600-4
+	FX9600_8 = ZebraModelType(96008) // FX9600-8
+)
+
 // HostnamePrefix will return the default hostname prefix of known Impinj readers
-func (imt ImpinjModelType) HostnamePrefix(defaultPrefix string) string {
-	switch imt {
+func (i ZebraModelType) HostnamePrefix(defaultPrefix string) string {
+	switch i {
+	case FX9600_4, FX9600_8:
+		return "fx9600"
+	default:
+		return defaultPrefix
+	}
+}
+
+// HostnamePrefix will return the default hostname prefix of known Impinj readers
+func (i ImpinjModelType) HostnamePrefix(defaultPrefix string) string {
+	switch i {
 	case SpeedwayR120, SpeedwayR220, SpeedwayR420, R700, XPortal:
 		return "SpeedwayR"
 	case XSpan:

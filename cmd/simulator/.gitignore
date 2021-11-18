@@ -1,1 +1,4 @@
 simulator
+llrp-simulator
+dist/
+*.tgz

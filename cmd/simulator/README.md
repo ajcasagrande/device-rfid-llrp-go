@@ -43,11 +43,17 @@ You may also need to override the API port using `-P <int> / -api-port <int>`.
 ### Example Output
 When run, you should see messages like so:
 ```
-2021/11/17 14:45:46 flags: {Filename:configs/SpeedwayR-12-34-FF.json Silent:false LLRPPort:5084 APIPort:55084 AntennaCount:2 TagPopulation:20 BaseEPC:301400000000000000000000 MaxRSSI:-60 MinRSSI:-80 ReadRate:100}
-2021/11/17 14:45:46 Loading simulator config from 'configs/SpeedwayR-12-34-FF.json'
-2021/11/17 14:45:46 Successfully loaded simulator config.
-2021/11/17 14:45:46 Starting llrp simulator on port: 5084
-2021/11/17 14:45:46 Serving API @ http://localhost:55084
+2021/11/18 12:05:38 flags: {Filename:configs/SpeedwayR-12-34-FF.json Silent:false LLRPPort:5084 APIPort:0 AntennaCount:2 TagPopulation:20 BaseEPC:301400000000000000000000 MaxRSSI:-60 MinRSSI:-80 ReadRate:100}
+2021/11/18 12:05:38 Loading simulator config from 'configs/SpeedwayR-12-34-FF.json'
+2021/11/18 12:05:38 Successfully loaded simulator config.
+2021/11/18 12:05:38 ***** Simulated Device Information *****
+2021/11/18 12:05:38   Device Name     : SpeedwayR-12-34-FF
+2021/11/18 12:05:38   Manufacturer    : Impinj
+2021/11/18 12:05:38   Model           : SpeedwayR420
+2021/11/18 12:05:38   FW Version      : 5.14.0.240
+2021/11/18 12:05:38 ****************************************
+2021/11/18 12:05:38 Starting llrp simulator on port 5084
+2021/11/18 12:05:38 Listening for LLRP messages on port 5084
 ```
 
 At this point, the llrp simulated device is up and running waiting for connections.
@@ -59,56 +65,49 @@ After running the simulator, you should be able to discover it via the device se
 
 ## Usage
 ```
-Usage of simulator:
-  -M int
-        max rssi (default -60)
-  -P int
-        api port (default 55084)
-  -a int
+Usage of llrp-simulator:
+  -a / -antenna-count <int>
         antenna count (default 2)
-  -antenna-count int
-        antenna count (default 2)
-  -api-port int
+        
+  -P / -api-port <int>
         api port (default 55084)
-  -base-epc string
+
+  -e / -epc / -base-epc <string>
         Base EPC (default "301400000000000000000000")
-  -e string
-        Base EPC (default "301400000000000000000000")
-  -epc string
-        Base EPC (default "301400000000000000000000")
-  -f string
+
+  -f / -file <string>
         config filename
-  -file string
-        config filename
-  -llrp-port int
-        llrp port (default 5084)
-  -m int
-        min rssi (default -80)
-  -max int
+
+  -M / -max / -max-rssi <int>
         max rssi (default -60)
-  -max-rssi int
-        max rssi (default -60)
-  -min int
+
+  -m / -min / -min-rssi <int>
         min rssi (default -80)
-  -min-rssi int
-        min rssi (default -80)
-  -p int
+
+  -p / -port / -llrp-port <int>
         llrp port (default 5084)
-  -port int
-        llrp port (default 5084)
-  -r int
+
+  -r / -rate / -read-rate <int>
         read rate (tags/s) (default 100)
-  -rate int
-        read rate (tags/s) (default 100)
-  -read-rate int
-        read rate (tags/s) (default 100)
-  -s    silent
-  -silent
+
+  -t / -tags / -tag-population <int>
+        tag population count (default 20)
+
+  -s / -silent
         silent
-  -t int
-        tag population count (default 20)
-  -tag-population int
-        tag population count (default 20)
-  -tags int
-        tag population count (default 20)
+```
+
+## Docker
+### Build
+To build the docker image, run:
+```shell
+make docker
+```
+
+### Run
+To run the docker image, run:
+> Note: Substitute `<VERSION>` with the version tagged during `make build`
+```shell
+docker run -it --rm -p "5084:5084" llrp-sim:<VERSION> \
+    -f configs/SpeedwayR-12-34-FF.json
 ```

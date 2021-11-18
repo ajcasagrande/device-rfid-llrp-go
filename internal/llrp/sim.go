@@ -20,7 +20,7 @@ const (
 	defaultReadRate      = 100
 	defaultAntennaCount  = 2
 	defaultPort          = 5084
-	defaultAPIPort       = 55084
+	defaultAPIPort       = 0
 	defaultTagPopulation = 20
 	defaultMinRSSI       = -80 // -95
 	defaultMaxRSSI       = -60 // -55
@@ -59,6 +59,10 @@ type Simulator struct {
 	stopTicker *time.Ticker
 
 	state *simulatorState
+
+	modelName  string
+	vendorName string
+	deviceName string
 
 	flagUpdateCh chan SimulatorConfigFlags
 
@@ -140,6 +144,13 @@ func (sim *Simulator) Initialize(flags SimulatorConfigFlags) error {
 		return err
 	}
 	sim.Logger.Println("Successfully loaded simulator config.")
+	sim.Logger.Println("***** Simulated Device Information *****")
+	sim.Logger.Printf("  %-16s: %s\n", "Device Name", sim.deviceName)
+	sim.Logger.Printf("  %-16s: %s\n", "Manufacturer", sim.vendorName)
+	sim.Logger.Printf("  %-16s: %s\n", "Model", sim.modelName)
+	sim.Logger.Printf("  %-16s: %s\n", "FW Version",
+		sim.config.ReaderCapabilities.GeneralDeviceCapabilities.FirmwareVersion)
+	sim.Logger.Println("****************************************")
 
 	sim.emu = NewTestEmulator(sim.flags.Silent)
 	sim.setupHandlers()
@@ -152,10 +163,11 @@ func (sim *Simulator) Initialize(flags SimulatorConfigFlags) error {
 // StartAsync starts processing llrp messages async
 // todo: add management rest server
 func (sim *Simulator) StartAsync() error {
-	sim.Logger.Printf("Starting llrp simulator on port: %d\n", sim.flags.LLRPPort)
+	sim.Logger.Printf("Starting llrp simulator on port %d\n", sim.flags.LLRPPort)
 	if err := sim.emu.StartAsync(sim.flags.LLRPPort); err != nil {
 		return err
 	}
+	sim.Logger.Printf("Listening for LLRP messages on port %d\n", sim.flags.LLRPPort)
 
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
@@ -163,7 +175,9 @@ func (sim *Simulator) StartAsync() error {
 	go func() {
 		defer wg.Done()
 		sim.setupAPIRoutes()
-		sim.serveAPI()
+		if sim.flags.APIPort != 0 {
+			sim.serveAPI()
+		}
 	}()
 
 	go func() {
@@ -245,6 +259,13 @@ func (sim *Simulator) loadConfig() error {
 	if err != nil {
 		return errors.Wrap(err, "error unmarshalling simulator config from json")
 	}
+
+	caps := sim.config.ReaderCapabilities.GeneralDeviceCapabilities
+	if caps == nil {
+		return errors.New("ReaderCapabilities.GeneralDeviceCapabilities is invalid or missing from config file!")
+	}
+	sim.vendorName, sim.modelName = DetermineVendorAndModelName(caps.DeviceManufacturer, caps.Model)
+	sim.deviceName = DetermineDeviceName(caps.DeviceManufacturer, caps.Model, sim.config.ReaderConfig.Identification)
 
 	return nil
 }

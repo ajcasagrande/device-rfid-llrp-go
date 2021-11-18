@@ -8,7 +8,6 @@ package driver
 import (
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"github.com/edgexfoundry/device-rfid-llrp-go/internal/llrp"
 	dsModels "github.com/edgexfoundry/device-sdk-go/pkg/models"
@@ -24,9 +23,8 @@ import (
 )
 
 const (
-	DefaultDevicePrefix = "LLRP"
-	UnknownVendorID     = 0
-	UnknownModelID      = 0
+	UnknownVendorID = 0
+	UnknownModelID  = 0
 )
 
 // discoveryInfo holds information about a discovered device
@@ -409,21 +407,7 @@ func probe(host, port string, timeout time.Duration) (*discoveryInfo, error) {
 		return nil, fmt.Errorf("unable to retrieve device identification")
 	}
 
-	prefix := DefaultDevicePrefix
-	if llrp.VendorIDType(info.vendor) == llrp.Impinj {
-		prefix = llrp.ImpinjModelType(info.model).HostnamePrefix(prefix)
-	}
-
-	var suffix string
-	rID := readerConfig.Identification.ReaderID
-	if readerConfig.Identification.IDType == llrp.ID_MAC_EUI64 && len(rID) >= 3 {
-		mac := rID[len(rID)-3:]
-		suffix = fmt.Sprintf("%02X-%02X-%02X", mac[0], mac[1], mac[2])
-	} else {
-		suffix = hex.EncodeToString(rID)
-	}
-
-	info.deviceName = prefix + "-" + suffix
+	info.deviceName = llrp.DetermineDeviceName(info.vendor, info.model, readerConfig.Identification)
 	driver.lc.Info(fmt.Sprintf("Discovered device: %+v", info))
 
 	return info, nil

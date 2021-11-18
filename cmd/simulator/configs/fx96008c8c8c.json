@@ -1,0 +1,47 @@
+{
+  "ReaderCapabilities": {
+    "GeneralDeviceCapabilities": {
+      "CanSetAntennaProperties": false,
+      "DeviceManufacturer": 161,
+      "GPIOCapabilities": {
+        "NumGPIs": 4
+      },
+      "HasUTCClock": true,
+      "MaxSupportedAntennas": 8,
+      "Model": 96008,
+      "PerAntennaAirProtocols": [
+        {
+          "AntennaID": 1,
+          "AirProtocolIDs": "AQ=="
+        }
+      ],
+      "FirmwareVersion": "2.7.19.0",
+      "ReceiveSensitivities": [
+        {
+          "Index": 0,
+          "ReceiveSensitivity": 0
+        }
+      ]
+    },
+    "LLRPCapabilities": {
+      "CanDoRFSurvey": true,
+      "CanDoTagInventoryStateAwareSingulation": true,
+      "CanReportBufferFillWarning": true,
+      "ClientRequestedOpSpecTimeout": 0,
+      "MaxAccessSpecs": 4,
+      "MaxInventoryParameterSpecsPerAISpec": 1,
+      "MaxOpSpecsPerAccessSpec": 8,
+      "MaxROSpecs": 64,
+      "MaxSpecsPerROSpec": 16,
+      "MaxPriorityLevelSupported": 7,
+      "SupportsClientRequestOpSpec": false,
+      "SupportsEventsAndReportHolding": true
+    }
+  },
+  "ReaderConfig": {
+    "Identification": {
+      "IDType": 0,
+      "ReaderID": "hCSN//+MjIw="
+    }
+  }
+}
