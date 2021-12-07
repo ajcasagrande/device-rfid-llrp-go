@@ -125,7 +125,7 @@ func (sim *Simulator) handleDeleteROSpec(td *TestDevice, msg Message) {
 	// note: id=0 means all
 	sim.Logger.Printf("delROSpec: id=%d", delRO.ROSpecID)
 
-	if delRO.ROSpecID != 0 && sim.state.ro == nil || sim.state.ro.ROSpecID != delRO.ROSpecID {
+	if delRO.ROSpecID != 0 && (sim.state.ro == nil || sim.state.ro.ROSpecID != delRO.ROSpecID) {
 		// todo: what should this return?
 		td.write(msg.id, &DeleteROSpecResponse{LLRPStatus: LLRPStatus{
 			Status:           StatusFieldInvalid,
