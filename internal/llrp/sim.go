@@ -6,12 +6,15 @@
 package llrp
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,6 +28,7 @@ const (
 	defaultMinRSSI       = -80 // -95
 	defaultMaxRSSI       = -60 // -55
 	defaultBaseEPC       = "301400000000000000000000"
+	defaultReaderID      = ""
 )
 
 var (
@@ -94,6 +98,7 @@ type SimulatorConfigFlags struct {
 	MaxRSSI       int    `json:"max_rssi,omitempty"`
 	MinRSSI       int    `json:"min_rssi,omitempty"`
 	ReadRate      int    `json:"read_rate,omitempty"`
+	ReaderID      string `json:"reader_id,omitempty"`
 }
 
 // NewSimulatorConfigFlags creates a new SimulatorConfigFlags struct with the default values loaded
@@ -109,6 +114,7 @@ func NewSimulatorConfigFlags() SimulatorConfigFlags {
 		MaxRSSI:       defaultMaxRSSI,
 		MinRSSI:       defaultMinRSSI,
 		ReadRate:      defaultReadRate,
+		ReaderID:      defaultReaderID,
 	}
 }
 
@@ -143,6 +149,38 @@ func (sim *Simulator) Initialize(flags SimulatorConfigFlags) error {
 	if err := sim.loadConfig(); err != nil {
 		return err
 	}
+
+	ident := sim.config.ReaderConfig.Identification
+	if sim.flags.ReaderID != "" {
+		// override reader id
+		if ident.IDType == ID_MAC_EUI64 {
+			sim.flags.ReaderID = strings.ReplaceAll(sim.flags.ReaderID, "-", "")
+			sim.flags.ReaderID = strings.ReplaceAll(sim.flags.ReaderID, ":", "")
+			if len(sim.flags.ReaderID) != 6 {
+				return fmt.Errorf("readerID must be a 6 digit hex string")
+			}
+
+			val, err := strconv.ParseInt(sim.flags.ReaderID, 16, 64)
+			if err != nil {
+				return errors.Wrapf(err, "unable to parse readerID as a hex integer")
+			}
+			// replace the last 3 bytes with the input hex string
+			for i := 0; i < 3; i++ {
+				ident.ReaderID[len(ident.ReaderID)-1-i] = byte(val >> (8 * i))
+			}
+		} else {
+			// base64 encode the input
+			base64.StdEncoding.Encode(ident.ReaderID, []byte(sim.flags.ReaderID))
+		}
+	}
+
+	caps := sim.config.ReaderCapabilities.GeneralDeviceCapabilities
+	if caps == nil {
+		return errors.New("ReaderCapabilities.GeneralDeviceCapabilities is invalid or missing from config file!")
+	}
+	sim.vendorName, sim.modelName = DetermineVendorAndModelName(caps.DeviceManufacturer, caps.Model)
+	sim.deviceName = DetermineDeviceName(caps.DeviceManufacturer, caps.Model, sim.config.ReaderConfig.Identification)
+
 	sim.Logger.Println("Successfully loaded simulator config.")
 	sim.Logger.Println("***** Simulated Device Information *****")
 	sim.Logger.Printf("  %-16s: %s\n", "Device Name", sim.deviceName)
@@ -259,13 +297,6 @@ func (sim *Simulator) loadConfig() error {
 	if err != nil {
 		return errors.Wrap(err, "error unmarshalling simulator config from json")
 	}
-
-	caps := sim.config.ReaderCapabilities.GeneralDeviceCapabilities
-	if caps == nil {
-		return errors.New("ReaderCapabilities.GeneralDeviceCapabilities is invalid or missing from config file!")
-	}
-	sim.vendorName, sim.modelName = DetermineVendorAndModelName(caps.DeviceManufacturer, caps.Model)
-	sim.deviceName = DetermineDeviceName(caps.DeviceManufacturer, caps.Model, sim.config.ReaderConfig.Identification)
 
 	return nil
 }

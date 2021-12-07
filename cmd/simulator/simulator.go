@@ -80,6 +80,9 @@ func parseFlags() llrp.SimulatorConfigFlags {
 	flag.IntVar(&cf.ReadRate, "rate", cf.ReadRate, "read rate (tags/s)")
 	flag.IntVar(&cf.ReadRate, "read-rate", cf.ReadRate, "read rate (tags/s)")
 
+	flag.StringVar(&cf.ReaderID, "id", cf.ReaderID, "Override Reader ID suffix with 6-digit hex string")
+	flag.StringVar(&cf.ReaderID, "reader-id", cf.ReaderID, "Override Reader ID suffix with 6-digit hex string")
+
 	flag.Parse()
 
 	if cf.Filename == "" {

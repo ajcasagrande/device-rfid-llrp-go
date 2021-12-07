@@ -1,4 +1,4 @@
-FROM alpine
+FROM scratch
 COPY configs  /llrp-sim/configs/
 COPY llrp-simulator LICENSE /llrp-sim/
 WORKDIR /llrp-sim

@@ -36,6 +36,1352 @@
       "MaxPriorityLevelSupported": 7,
       "SupportsClientRequestOpSpec": false,
       "SupportsEventsAndReportHolding": true
+    },
+    "RegulatoryCapabilities": {
+      "CommunicationsStandard": 1,
+      "CountryCode": 0,
+      "UHFBandCapabilities": {
+        "FrequencyInformation": {
+          "FrequencyHopTables": [
+            {
+              "HopTableID": 1,
+              "Frequencies": [
+                915750,
+                909250,
+                918750,
+                917750,
+                905250,
+                904750,
+                925250,
+                921750,
+                914750,
+                906750,
+                913750,
+                915250,
+                922250,
+                911250,
+                911750,
+                903750,
+                908750,
+                905750,
+                912250,
+                906250,
+                917250,
+                914250,
+                903250,
+                907250,
+                918250,
+                916250,
+                910250,
+                910750,
+                907750,
+                924750,
+                909750,
+                919750,
+                916750,
+                926750,
+                913250,
+                923750,
+                908250,
+                925750,
+                912750,
+                924250,
+                921250,
+                920750,
+                922750,
+                902750,
+                926250,
+                923250,
+                904250,
+                927250,
+                920250,
+                919250
+              ]
+            }
+          ],
+          "Hopping": true
+        },
+        "TransmitPowerLevels": [
+          {
+            "Index": 0,
+            "TransmitPowerValue": 1000
+          },
+          {
+            "Index": 1,
+            "TransmitPowerValue": 1010
+          },
+          {
+            "Index": 10,
+            "TransmitPowerValue": 1100
+          },
+          {
+            "Index": 100,
+            "TransmitPowerValue": 2000
+          },
+          {
+            "Index": 101,
+            "TransmitPowerValue": 2010
+          },
+          {
+            "Index": 102,
+            "TransmitPowerValue": 2020
+          },
+          {
+            "Index": 103,
+            "TransmitPowerValue": 2030
+          },
+          {
+            "Index": 104,
+            "TransmitPowerValue": 2040
+          },
+          {
+            "Index": 105,
+            "TransmitPowerValue": 2050
+          },
+          {
+            "Index": 106,
+            "TransmitPowerValue": 2060
+          },
+          {
+            "Index": 107,
+            "TransmitPowerValue": 2070
+          },
+          {
+            "Index": 108,
+            "TransmitPowerValue": 2080
+          },
+          {
+            "Index": 109,
+            "TransmitPowerValue": 2090
+          },
+          {
+            "Index": 11,
+            "TransmitPowerValue": 1110
+          },
+          {
+            "Index": 110,
+            "TransmitPowerValue": 2100
+          },
+          {
+            "Index": 111,
+            "TransmitPowerValue": 2110
+          },
+          {
+            "Index": 112,
+            "TransmitPowerValue": 2120
+          },
+          {
+            "Index": 113,
+            "TransmitPowerValue": 2130
+          },
+          {
+            "Index": 114,
+            "TransmitPowerValue": 2140
+          },
+          {
+            "Index": 115,
+            "TransmitPowerValue": 2150
+          },
+          {
+            "Index": 116,
+            "TransmitPowerValue": 2160
+          },
+          {
+            "Index": 117,
+            "TransmitPowerValue": 2170
+          },
+          {
+            "Index": 118,
+            "TransmitPowerValue": 2180
+          },
+          {
+            "Index": 119,
+            "TransmitPowerValue": 2190
+          },
+          {
+            "Index": 12,
+            "TransmitPowerValue": 1120
+          },
+          {
+            "Index": 120,
+            "TransmitPowerValue": 2200
+          },
+          {
+            "Index": 121,
+            "TransmitPowerValue": 2210
+          },
+          {
+            "Index": 122,
+            "TransmitPowerValue": 2220
+          },
+          {
+            "Index": 123,
+            "TransmitPowerValue": 2230
+          },
+          {
+            "Index": 124,
+            "TransmitPowerValue": 2240
+          },
+          {
+            "Index": 125,
+            "TransmitPowerValue": 2250
+          },
+          {
+            "Index": 126,
+            "TransmitPowerValue": 2260
+          },
+          {
+            "Index": 127,
+            "TransmitPowerValue": 2270
+          },
+          {
+            "Index": 128,
+            "TransmitPowerValue": 2280
+          },
+          {
+            "Index": 129,
+            "TransmitPowerValue": 2290
+          },
+          {
+            "Index": 13,
+            "TransmitPowerValue": 1130
+          },
+          {
+            "Index": 130,
+            "TransmitPowerValue": 2300
+          },
+          {
+            "Index": 131,
+            "TransmitPowerValue": 2310
+          },
+          {
+            "Index": 132,
+            "TransmitPowerValue": 2320
+          },
+          {
+            "Index": 133,
+            "TransmitPowerValue": 2330
+          },
+          {
+            "Index": 134,
+            "TransmitPowerValue": 2340
+          },
+          {
+            "Index": 135,
+            "TransmitPowerValue": 2350
+          },
+          {
+            "Index": 136,
+            "TransmitPowerValue": 2360
+          },
+          {
+            "Index": 137,
+            "TransmitPowerValue": 2370
+          },
+          {
+            "Index": 138,
+            "TransmitPowerValue": 2380
+          },
+          {
+            "Index": 139,
+            "TransmitPowerValue": 2390
+          },
+          {
+            "Index": 14,
+            "TransmitPowerValue": 1140
+          },
+          {
+            "Index": 140,
+            "TransmitPowerValue": 2400
+          },
+          {
+            "Index": 141,
+            "TransmitPowerValue": 2410
+          },
+          {
+            "Index": 142,
+            "TransmitPowerValue": 2420
+          },
+          {
+            "Index": 143,
+            "TransmitPowerValue": 2430
+          },
+          {
+            "Index": 144,
+            "TransmitPowerValue": 2440
+          },
+          {
+            "Index": 145,
+            "TransmitPowerValue": 2450
+          },
+          {
+            "Index": 146,
+            "TransmitPowerValue": 2460
+          },
+          {
+            "Index": 147,
+            "TransmitPowerValue": 2470
+          },
+          {
+            "Index": 148,
+            "TransmitPowerValue": 2480
+          },
+          {
+            "Index": 149,
+            "TransmitPowerValue": 2490
+          },
+          {
+            "Index": 15,
+            "TransmitPowerValue": 1150
+          },
+          {
+            "Index": 150,
+            "TransmitPowerValue": 2500
+          },
+          {
+            "Index": 151,
+            "TransmitPowerValue": 2510
+          },
+          {
+            "Index": 152,
+            "TransmitPowerValue": 2520
+          },
+          {
+            "Index": 153,
+            "TransmitPowerValue": 2530
+          },
+          {
+            "Index": 154,
+            "TransmitPowerValue": 2540
+          },
+          {
+            "Index": 155,
+            "TransmitPowerValue": 2550
+          },
+          {
+            "Index": 156,
+            "TransmitPowerValue": 2560
+          },
+          {
+            "Index": 157,
+            "TransmitPowerValue": 2570
+          },
+          {
+            "Index": 158,
+            "TransmitPowerValue": 2580
+          },
+          {
+            "Index": 159,
+            "TransmitPowerValue": 2590
+          },
+          {
+            "Index": 16,
+            "TransmitPowerValue": 1160
+          },
+          {
+            "Index": 160,
+            "TransmitPowerValue": 2600
+          },
+          {
+            "Index": 161,
+            "TransmitPowerValue": 2610
+          },
+          {
+            "Index": 162,
+            "TransmitPowerValue": 2620
+          },
+          {
+            "Index": 163,
+            "TransmitPowerValue": 2630
+          },
+          {
+            "Index": 164,
+            "TransmitPowerValue": 2640
+          },
+          {
+            "Index": 165,
+            "TransmitPowerValue": 2650
+          },
+          {
+            "Index": 166,
+            "TransmitPowerValue": 2660
+          },
+          {
+            "Index": 167,
+            "TransmitPowerValue": 2670
+          },
+          {
+            "Index": 168,
+            "TransmitPowerValue": 2680
+          },
+          {
+            "Index": 169,
+            "TransmitPowerValue": 2690
+          },
+          {
+            "Index": 17,
+            "TransmitPowerValue": 1170
+          },
+          {
+            "Index": 170,
+            "TransmitPowerValue": 2700
+          },
+          {
+            "Index": 171,
+            "TransmitPowerValue": 2710
+          },
+          {
+            "Index": 172,
+            "TransmitPowerValue": 2720
+          },
+          {
+            "Index": 173,
+            "TransmitPowerValue": 2730
+          },
+          {
+            "Index": 174,
+            "TransmitPowerValue": 2740
+          },
+          {
+            "Index": 175,
+            "TransmitPowerValue": 2750
+          },
+          {
+            "Index": 176,
+            "TransmitPowerValue": 2760
+          },
+          {
+            "Index": 177,
+            "TransmitPowerValue": 2770
+          },
+          {
+            "Index": 178,
+            "TransmitPowerValue": 2780
+          },
+          {
+            "Index": 179,
+            "TransmitPowerValue": 2790
+          },
+          {
+            "Index": 18,
+            "TransmitPowerValue": 1180
+          },
+          {
+            "Index": 180,
+            "TransmitPowerValue": 2800
+          },
+          {
+            "Index": 181,
+            "TransmitPowerValue": 2810
+          },
+          {
+            "Index": 182,
+            "TransmitPowerValue": 2820
+          },
+          {
+            "Index": 183,
+            "TransmitPowerValue": 2830
+          },
+          {
+            "Index": 184,
+            "TransmitPowerValue": 2840
+          },
+          {
+            "Index": 185,
+            "TransmitPowerValue": 2850
+          },
+          {
+            "Index": 186,
+            "TransmitPowerValue": 2860
+          },
+          {
+            "Index": 187,
+            "TransmitPowerValue": 2870
+          },
+          {
+            "Index": 188,
+            "TransmitPowerValue": 2880
+          },
+          {
+            "Index": 189,
+            "TransmitPowerValue": 2890
+          },
+          {
+            "Index": 19,
+            "TransmitPowerValue": 1190
+          },
+          {
+            "Index": 190,
+            "TransmitPowerValue": 2900
+          },
+          {
+            "Index": 191,
+            "TransmitPowerValue": 2910
+          },
+          {
+            "Index": 192,
+            "TransmitPowerValue": 2920
+          },
+          {
+            "Index": 193,
+            "TransmitPowerValue": 2930
+          },
+          {
+            "Index": 194,
+            "TransmitPowerValue": 2940
+          },
+          {
+            "Index": 195,
+            "TransmitPowerValue": 2950
+          },
+          {
+            "Index": 196,
+            "TransmitPowerValue": 2960
+          },
+          {
+            "Index": 197,
+            "TransmitPowerValue": 2970
+          },
+          {
+            "Index": 198,
+            "TransmitPowerValue": 2980
+          },
+          {
+            "Index": 199,
+            "TransmitPowerValue": 2990
+          },
+          {
+            "Index": 2,
+            "TransmitPowerValue": 1020
+          },
+          {
+            "Index": 20,
+            "TransmitPowerValue": 1200
+          },
+          {
+            "Index": 200,
+            "TransmitPowerValue": 3000
+          },
+          {
+            "Index": 21,
+            "TransmitPowerValue": 1210
+          },
+          {
+            "Index": 22,
+            "TransmitPowerValue": 1220
+          },
+          {
+            "Index": 23,
+            "TransmitPowerValue": 1230
+          },
+          {
+            "Index": 24,
+            "TransmitPowerValue": 1240
+          },
+          {
+            "Index": 25,
+            "TransmitPowerValue": 1250
+          },
+          {
+            "Index": 26,
+            "TransmitPowerValue": 1260
+          },
+          {
+            "Index": 27,
+            "TransmitPowerValue": 1270
+          },
+          {
+            "Index": 28,
+            "TransmitPowerValue": 1280
+          },
+          {
+            "Index": 29,
+            "TransmitPowerValue": 1290
+          },
+          {
+            "Index": 3,
+            "TransmitPowerValue": 1030
+          },
+          {
+            "Index": 30,
+            "TransmitPowerValue": 1300
+          },
+          {
+            "Index": 31,
+            "TransmitPowerValue": 1310
+          },
+          {
+            "Index": 32,
+            "TransmitPowerValue": 1320
+          },
+          {
+            "Index": 33,
+            "TransmitPowerValue": 1330
+          },
+          {
+            "Index": 34,
+            "TransmitPowerValue": 1340
+          },
+          {
+            "Index": 35,
+            "TransmitPowerValue": 1350
+          },
+          {
+            "Index": 36,
+            "TransmitPowerValue": 1360
+          },
+          {
+            "Index": 37,
+            "TransmitPowerValue": 1370
+          },
+          {
+            "Index": 38,
+            "TransmitPowerValue": 1380
+          },
+          {
+            "Index": 39,
+            "TransmitPowerValue": 1390
+          },
+          {
+            "Index": 4,
+            "TransmitPowerValue": 1040
+          },
+          {
+            "Index": 40,
+            "TransmitPowerValue": 1400
+          },
+          {
+            "Index": 41,
+            "TransmitPowerValue": 1410
+          },
+          {
+            "Index": 42,
+            "TransmitPowerValue": 1420
+          },
+          {
+            "Index": 43,
+            "TransmitPowerValue": 1430
+          },
+          {
+            "Index": 44,
+            "TransmitPowerValue": 1440
+          },
+          {
+            "Index": 45,
+            "TransmitPowerValue": 1450
+          },
+          {
+            "Index": 46,
+            "TransmitPowerValue": 1460
+          },
+          {
+            "Index": 47,
+            "TransmitPowerValue": 1470
+          },
+          {
+            "Index": 48,
+            "TransmitPowerValue": 1480
+          },
+          {
+            "Index": 49,
+            "TransmitPowerValue": 1490
+          },
+          {
+            "Index": 5,
+            "TransmitPowerValue": 1050
+          },
+          {
+            "Index": 50,
+            "TransmitPowerValue": 1500
+          },
+          {
+            "Index": 51,
+            "TransmitPowerValue": 1510
+          },
+          {
+            "Index": 52,
+            "TransmitPowerValue": 1520
+          },
+          {
+            "Index": 53,
+            "TransmitPowerValue": 1530
+          },
+          {
+            "Index": 54,
+            "TransmitPowerValue": 1540
+          },
+          {
+            "Index": 55,
+            "TransmitPowerValue": 1550
+          },
+          {
+            "Index": 56,
+            "TransmitPowerValue": 1560
+          },
+          {
+            "Index": 57,
+            "TransmitPowerValue": 1570
+          },
+          {
+            "Index": 58,
+            "TransmitPowerValue": 1580
+          },
+          {
+            "Index": 59,
+            "TransmitPowerValue": 1590
+          },
+          {
+            "Index": 6,
+            "TransmitPowerValue": 1060
+          },
+          {
+            "Index": 60,
+            "TransmitPowerValue": 1600
+          },
+          {
+            "Index": 61,
+            "TransmitPowerValue": 1610
+          },
+          {
+            "Index": 62,
+            "TransmitPowerValue": 1620
+          },
+          {
+            "Index": 63,
+            "TransmitPowerValue": 1630
+          },
+          {
+            "Index": 64,
+            "TransmitPowerValue": 1640
+          },
+          {
+            "Index": 65,
+            "TransmitPowerValue": 1650
+          },
+          {
+            "Index": 66,
+            "TransmitPowerValue": 1660
+          },
+          {
+            "Index": 67,
+            "TransmitPowerValue": 1670
+          },
+          {
+            "Index": 68,
+            "TransmitPowerValue": 1680
+          },
+          {
+            "Index": 69,
+            "TransmitPowerValue": 1690
+          },
+          {
+            "Index": 7,
+            "TransmitPowerValue": 1070
+          },
+          {
+            "Index": 70,
+            "TransmitPowerValue": 1700
+          },
+          {
+            "Index": 71,
+            "TransmitPowerValue": 1710
+          },
+          {
+            "Index": 72,
+            "TransmitPowerValue": 1720
+          },
+          {
+            "Index": 73,
+            "TransmitPowerValue": 1730
+          },
+          {
+            "Index": 74,
+            "TransmitPowerValue": 1740
+          },
+          {
+            "Index": 75,
+            "TransmitPowerValue": 1750
+          },
+          {
+            "Index": 76,
+            "TransmitPowerValue": 1760
+          },
+          {
+            "Index": 77,
+            "TransmitPowerValue": 1770
+          },
+          {
+            "Index": 78,
+            "TransmitPowerValue": 1780
+          },
+          {
+            "Index": 79,
+            "TransmitPowerValue": 1790
+          },
+          {
+            "Index": 8,
+            "TransmitPowerValue": 1080
+          },
+          {
+            "Index": 80,
+            "TransmitPowerValue": 1800
+          },
+          {
+            "Index": 81,
+            "TransmitPowerValue": 1810
+          },
+          {
+            "Index": 82,
+            "TransmitPowerValue": 1820
+          },
+          {
+            "Index": 83,
+            "TransmitPowerValue": 1830
+          },
+          {
+            "Index": 84,
+            "TransmitPowerValue": 1840
+          },
+          {
+            "Index": 85,
+            "TransmitPowerValue": 1850
+          },
+          {
+            "Index": 86,
+            "TransmitPowerValue": 1860
+          },
+          {
+            "Index": 87,
+            "TransmitPowerValue": 1870
+          },
+          {
+            "Index": 88,
+            "TransmitPowerValue": 1880
+          },
+          {
+            "Index": 89,
+            "TransmitPowerValue": 1890
+          },
+          {
+            "Index": 9,
+            "TransmitPowerValue": 1090
+          },
+          {
+            "Index": 90,
+            "TransmitPowerValue": 1900
+          },
+          {
+            "Index": 91,
+            "TransmitPowerValue": 1910
+          },
+          {
+            "Index": 92,
+            "TransmitPowerValue": 1920
+          },
+          {
+            "Index": 93,
+            "TransmitPowerValue": 1930
+          },
+          {
+            "Index": 94,
+            "TransmitPowerValue": 1940
+          },
+          {
+            "Index": 95,
+            "TransmitPowerValue": 1950
+          },
+          {
+            "Index": 96,
+            "TransmitPowerValue": 1960
+          },
+          {
+            "Index": 97,
+            "TransmitPowerValue": 1970
+          },
+          {
+            "Index": 98,
+            "TransmitPowerValue": 1980
+          },
+          {
+            "Index": 99,
+            "TransmitPowerValue": 1990
+          }
+        ],
+        "C1G2RFModes": {
+          "UHFC1G2RFModeTableEntries": [
+            {
+              "ModeID": 0,
+              "BackscatterDataRate": 668,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 668,
+              "MinTariTime": 668,
+              "Modulation": 0,
+              "PIERatio": 668,
+              "DivideRatio": 1,
+              "StepTariTime": 668
+            },
+            {
+              "ModeID": 1,
+              "BackscatterDataRate": 640000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 6250,
+              "MinTariTime": 6250,
+              "Modulation": 0,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 10,
+              "BackscatterDataRate": 128000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 1,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 11,
+              "BackscatterDataRate": 160000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 18800,
+              "MinTariTime": 12500,
+              "Modulation": 1,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 12,
+              "BackscatterDataRate": 160000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 18800,
+              "MinTariTime": 12500,
+              "Modulation": 1,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 13,
+              "BackscatterDataRate": 60000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 2,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 14,
+              "BackscatterDataRate": 60000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 2,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 15,
+              "BackscatterDataRate": 60000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 2,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 16,
+              "BackscatterDataRate": 60000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 2,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 17,
+              "BackscatterDataRate": 64000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 2,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 18,
+              "BackscatterDataRate": 64000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 2,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 19,
+              "BackscatterDataRate": 64000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 2,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 2,
+              "BackscatterDataRate": 640000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 6250,
+              "MinTariTime": 6250,
+              "Modulation": 0,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 20,
+              "BackscatterDataRate": 64000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 2,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 21,
+              "BackscatterDataRate": 80000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 18800,
+              "MinTariTime": 12500,
+              "Modulation": 2,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 22,
+              "BackscatterDataRate": 80000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 18800,
+              "MinTariTime": 12500,
+              "Modulation": 2,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 23,
+              "BackscatterDataRate": 668,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 668,
+              "MinTariTime": 668,
+              "Modulation": 0,
+              "PIERatio": 668,
+              "DivideRatio": 1,
+              "StepTariTime": 668
+            },
+            {
+              "ModeID": 24,
+              "BackscatterDataRate": 320000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 18800,
+              "MinTariTime": 12500,
+              "Modulation": 0,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 25,
+              "BackscatterDataRate": 320000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 18800,
+              "MinTariTime": 12500,
+              "Modulation": 0,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 26,
+              "BackscatterDataRate": 30000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 3,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 27,
+              "BackscatterDataRate": 30000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 3,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 28,
+              "BackscatterDataRate": 30000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 3,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 29,
+              "BackscatterDataRate": 30000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 3,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 3,
+              "BackscatterDataRate": 120000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 1,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 30,
+              "BackscatterDataRate": 32000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 3,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 31,
+              "BackscatterDataRate": 32000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 3,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 32,
+              "BackscatterDataRate": 32000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 3,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 33,
+              "BackscatterDataRate": 32000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 3,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 34,
+              "BackscatterDataRate": 40000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 18800,
+              "MinTariTime": 12500,
+              "Modulation": 3,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 35,
+              "BackscatterDataRate": 40000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 18800,
+              "MinTariTime": 12500,
+              "Modulation": 3,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 4,
+              "BackscatterDataRate": 120000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 1,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 5,
+              "BackscatterDataRate": 120000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 1,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 6,
+              "BackscatterDataRate": 120000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 1,
+              "PIERatio": 2000,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 7,
+              "BackscatterDataRate": 128000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 1,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 0
+            },
+            {
+              "ModeID": 8,
+              "BackscatterDataRate": 128000,
+              "IsEPCHagConformant": true,
+              "ForwardLinkModulation": 0,
+              "SpectralMask": 3,
+              "MaxTariTime": 23000,
+              "MinTariTime": 12500,
+              "Modulation": 1,
+              "PIERatio": 1500,
+              "DivideRatio": 1,
+              "StepTariTime": 2100
+            },
+            {
+              "ModeID": 9,
+              "BackscatterDataRate": 128000,
+              "ForwardLinkModulation": 0,
+              "MaxTariTime": 25000,
+              "MinTariTime": 25000,
+              "Modulation": 1,
+              "DivideRatio": 1,
+              "SpectralMask": 3,
+              "IsEPCHagConformant": true,
+              "PIERatio": 2000,
+              "StepTariTime": 0
+            }
+          ]
+        }
+      }
+    },
+    "C1G2LLRPCapabilities": {
     }
   },
   "ReaderConfig": {
