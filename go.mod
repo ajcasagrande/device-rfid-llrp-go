@@ -2,7 +2,10 @@ module github.com/edgexfoundry/device-rfid-llrp-go
 
 go 1.17
 
+replace github.com/edgexfoundry/device-onvif-camera/pkg/netscan => ../device-onvif-camera/pkg/netscan
+
 require (
+	github.com/edgexfoundry/device-onvif-camera/pkg/netscan v0.0.0-local
 	github.com/edgexfoundry/device-sdk-go/v2 v2.2.0
 	github.com/edgexfoundry/go-mod-core-contracts/v2 v2.2.0
 	github.com/pkg/errors v0.9.1

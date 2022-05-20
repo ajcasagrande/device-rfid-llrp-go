@@ -7,27 +7,17 @@ package driver
 
 import (
 	"context"
-	"encoding/binary"
-	"fmt"
-	"net"
+	"github.com/edgexfoundry/device-onvif-camera/pkg/netscan"
+	dsModels "github.com/edgexfoundry/device-sdk-go/v2/pkg/models"
+	"github.com/stretchr/testify/require"
 	"os"
 	"strconv"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/edgexfoundry/device-rfid-llrp-go/internal/llrp"
 	"github.com/edgexfoundry/go-mod-core-contracts/v2/clients/logger"
 )
-
-type inetTest struct {
-	inet  string
-	first string
-	last  string
-	size  uint32
-	err   bool
-}
 
 var (
 	svc = NewMockSdkService()
@@ -42,12 +32,14 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func makeParams() discoverParams {
-	return discoverParams{
-		subnets:    []string{"127.0.0.1/32"},
-		asyncLimit: 5000,
-		timeout:    1 * time.Second,
-		scanPort:   "59923",
+func makeParams() netscan.Params {
+	return netscan.Params{
+		Subnets:         []string{"127.0.0.1/32"},
+		ScanPorts:       []string{"59923"},
+		AsyncLimit:      1000,
+		NetworkProtocol: netscan.NetworkTCP,
+		Timeout:         1 * time.Second,
+		Logger:          driver.lc,
 	}
 }
 
@@ -155,9 +147,9 @@ func TestAutoDiscoverNaming(t *testing.T) {
 		})
 	}
 
-	scanPort, err := strconv.Atoi(params.scanPort)
+	scanPort, err := strconv.Atoi(params.ScanPorts[0])
 	if err != nil {
-		t.Fatalf("Failed to parse driver.config.ScanPort, unable to run discovery tests. value = %v", params.scanPort)
+		t.Fatalf("Failed to parse driver.config.ScanPort, unable to run discovery tests. value = %v", params.ScanPorts[0])
 	}
 
 	for _, test := range tests {
@@ -187,7 +179,7 @@ func TestAutoDiscoverNaming(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			discovered := autoDiscover(ctx, params)
+			discovered := netscan.AutoDiscover(ctx, NewLLRPProtocolDiscovery(driver), params)
 			if len(discovered) != 1 {
 				t.Fatalf("expected 1 discovered device, however got: %d", len(discovered))
 			}
@@ -196,17 +188,20 @@ func TestAutoDiscoverNaming(t *testing.T) {
 				t.Errorf("expected discovered device's name to be %s, but was: %s", test.name, discovered[0].Name)
 			}
 
-			pen, ok := discovered[0].Protocols["metadata"]["vendorPEN"]
+			info, ok := discovered[0].Info.(dsModels.DiscoveredDevice)
+			require.True(t, ok)
+
+			pen, ok := info.Protocols["metadata"]["vendorPEN"]
 			if !ok {
-				t.Fatalf("Missing vendorPEN field in metadata protocol. ProtocolMap: %+v", discovered[0].Protocols)
+				t.Fatalf("Missing vendorPEN field in metadata protocol. ProtocolMap: %+v", info.Protocols)
 			}
 			if pen != strconv.FormatUint(uint64(test.caps.DeviceManufacturer), 10) {
 				t.Errorf("expected vendorPEN to be %v, but was: %s", test.caps.DeviceManufacturer, pen)
 			}
 
-			fw, ok := discovered[0].Protocols["metadata"]["fwVersion"]
+			fw, ok := info.Protocols["metadata"]["fwVersion"]
 			if !ok {
-				t.Fatalf("Missing fwVersion field in metadata protocol. ProtocolMap: %+v", discovered[0].Protocols)
+				t.Fatalf("Missing fwVersion field in metadata protocol. ProtocolMap: %+v", info.Protocols)
 			}
 			if fw != test.caps.FirmwareVersion {
 				t.Errorf("expected fwVersion to be %v, but was: %s", test.caps.FirmwareVersion, fw)
@@ -225,15 +220,15 @@ func TestAutoDiscover(t *testing.T) {
 
 	// attempt to discover without emulator, expect none found
 	svc.clearDevices()
-	discovered := autoDiscover(context.Background(), params)
+	discovered := netscan.AutoDiscover(context.Background(), NewLLRPProtocolDiscovery(driver), params)
 	if len(discovered) != 0 {
 		t.Fatalf("expected 0 discovered devices, however got: %d", len(discovered))
 	}
 
 	// attempt to discover WITH emulator, expect emulator to be found
-	port, err := strconv.Atoi(params.scanPort)
+	port, err := strconv.Atoi(params.ScanPorts[0])
 	if err != nil {
-		t.Fatalf("Failed to parse driver.config.ScanPort, unable to run discovery tests. value = %v", params.scanPort)
+		t.Fatalf("Failed to parse driver.config.ScanPort, unable to run discovery tests. value = %v", params.ScanPorts[0])
 	}
 	emu := llrp.NewTestEmulator(!testing.Verbose())
 	if err := emu.StartAsync(port); err != nil {
@@ -260,15 +255,22 @@ func TestAutoDiscover(t *testing.T) {
 	}
 	emu.SetResponse(llrp.MsgGetReaderCapabilities, &readerCaps)
 
-	discovered = autoDiscover(context.Background(), params)
+	discovered = netscan.AutoDiscover(context.Background(), NewLLRPProtocolDiscovery(driver), params)
 	if len(discovered) != 1 {
 		t.Fatalf("expected 1 discovered device, however got: %d", len(discovered))
 	}
-	svc.AddDiscoveredDevices(discovered)
+
+	var discoveredDevices []dsModels.DiscoveredDevice
+	for _, d := range discovered {
+		dev, ok := d.Info.(dsModels.DiscoveredDevice)
+		require.True(t, ok)
+		discoveredDevices = append(discoveredDevices, dev)
+	}
+	svc.AddDiscoveredDevices(discoveredDevices)
 
 	// attempt to discover again WITH emulator, however expect emulator to be skipped
 	svc.resetAddedCount()
-	discovered = autoDiscover(context.Background(), params)
+	discovered = netscan.AutoDiscover(context.Background(), NewLLRPProtocolDiscovery(driver), params)
 	if len(discovered) != 0 {
 		t.Fatalf("expected no devices to be discovered, but was %d", len(discovered))
 	}
@@ -278,120 +280,4 @@ func TestAutoDiscover(t *testing.T) {
 	}
 	// reset
 	svc.clearDevices()
-}
-
-func mockIpWorker(ipCh <-chan uint32, result *inetTest) {
-	ip := net.IP([]byte{0, 0, 0, 0})
-	var last uint32
-
-	for a := range ipCh {
-		atomic.AddUint32(&result.size, 1)
-		atomic.StoreUint32(&last, a)
-
-		if result.first == "" {
-			binary.BigEndian.PutUint32(ip, a)
-			result.first = ip.String()
-		}
-		binary.BigEndian.PutUint32(ip, last)
-		result.last = ip.String()
-	}
-
-}
-
-func ipGeneratorTest(input inetTest) (result inetTest) {
-	var wg sync.WaitGroup
-	ipCh := make(chan uint32, input.size)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		mockIpWorker(ipCh, &result)
-	}()
-
-	_, inet, err := net.ParseCIDR(input.inet)
-	if err != nil {
-		result.err = true
-		return result
-	}
-
-	ipGenerator(context.Background(), inet, ipCh)
-	close(ipCh)
-	wg.Wait()
-
-	return result
-}
-
-// TestIpGenerator calls the ip generator and validates that the first ip, last ip, and size
-// match the expected values.
-func TestIpGenerator(t *testing.T) {
-	tests := []inetTest{
-		{
-			inet:  "192.168.1.110/24",
-			first: "192.168.1.1",
-			last:  "192.168.1.254",
-			size:  computeNetSz(24),
-		},
-		{
-			inet:  "192.168.1.110/32",
-			first: "192.168.1.110",
-			last:  "192.168.1.110",
-			size:  computeNetSz(32),
-		},
-		{
-			inet:  "192.168.1.20/31",
-			first: "192.168.1.20",
-			last:  "192.168.1.20",
-			size:  computeNetSz(31),
-		},
-		{
-			inet:  "192.168.99.20/16",
-			first: "192.168.0.1",
-			last:  "192.168.255.254",
-			size:  computeNetSz(16),
-		},
-		{
-			inet:  "10.10.10.10/8",
-			first: "10.0.0.1",
-			last:  "10.255.255.254",
-			size:  computeNetSz(8),
-		},
-	}
-	for _, input := range tests {
-		input := input
-		t.Run(input.inet, func(t *testing.T) {
-			t.Parallel()
-			result := ipGeneratorTest(input)
-			if result.err && !input.err {
-				t.Error("got unexpected error")
-			} else if !result.err && input.err {
-				t.Error("expected an error, but no error was returned")
-			} else {
-				if result.size != input.size {
-					t.Errorf("expected %d ips, but got %d", input.size, result.size)
-				}
-				if result.first != input.first {
-					t.Errorf("expected first ip in range to be %s, but got %s", input.first, result.first)
-				}
-				if result.last != input.last {
-					t.Errorf("expected last ip in range to be %s, but got %s", input.last, result.last)
-				}
-			}
-		})
-	}
-}
-
-// TestIpGeneratorSubnetSizes calls the ip generator for various subnet sizes and validates that
-// the correct amount of IP addresses are generated
-func TestIpGeneratorSubnetSizes(t *testing.T) {
-	// stop at 10 because the time taken gets exponentially longer
-	for i := 32; i >= 10; i-- {
-		i := i
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			t.Parallel()
-			result := ipGeneratorTest(inetTest{size: uint32(i), inet: fmt.Sprintf("192.168.1.1/%d", i)})
-			if result.size != computeNetSz(i) {
-				t.Errorf("expected %d ips, but got %d", computeNetSz(i), result.size)
-			}
-		})
-	}
 }

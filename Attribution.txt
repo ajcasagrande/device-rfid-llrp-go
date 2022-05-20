@@ -236,3 +236,6 @@ https://github.com/rcrowley/go-metrics/blob/master/LICENSE
 
 go-kit/log (MIT) https://github.com/go-kit/log
 https://github.com/go-kit/log/blob/main/LICENSE
+
+edgexfoundry/device-onvif-camera/pkg/netscan (Apache 2.0) https://github.com/edgexfoundry/device-onvif-camera/pkg/netscan
+https://github.com/edgexfoundry/device-onvif-camera/blob/main/pkg/netscan/LICENSE

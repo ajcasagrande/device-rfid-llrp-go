@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/edgexfoundry/device-onvif-camera/pkg/netscan"
 	"io/ioutil"
 	"math"
 	"net"
@@ -843,27 +844,46 @@ func (d *Driver) Discover() {
 		defer cancel()
 	}
 
-	d.discover(ctx)
+	d.discoverNetscan(ctx)
 }
 
-func (d *Driver) discover(ctx context.Context) {
-	d.configMu.RLock()
-	params := discoverParams{
-		// split the comma separated string here to avoid issues with EdgeX's Consul implementation
-		subnets:    strings.Split(d.config.AppCustom.DiscoverySubnets, ","),
-		asyncLimit: d.config.AppCustom.ProbeAsyncLimit,
-		timeout:    time.Duration(d.config.AppCustom.ProbeTimeoutSeconds) * time.Second,
-		scanPort:   d.config.AppCustom.ScanPort,
-	}
-	d.configMu.RUnlock()
+// netscan enable/disable via config option
+func (d *Driver) discoverNetscan(ctx context.Context) {
 
-	t1 := time.Now()
-	result := autoDiscover(ctx, params)
+	if len(strings.TrimSpace(d.config.AppCustom.DiscoverySubnets)) == 0 {
+		d.lc.Debug("discovery not performed, DiscoverySubnets are empty.")
+		return
+	}
+
+	params := netscan.Params{
+		// split the comma separated string here to avoid issues with EdgeX's Consul implementation
+		Subnets:         strings.Split(d.config.AppCustom.DiscoverySubnets, ","),
+		AsyncLimit:      d.config.AppCustom.ProbeAsyncLimit,
+		Timeout:         time.Duration(d.config.AppCustom.ProbeTimeoutSeconds) * time.Second,
+		ScanPorts:       []string{d.config.AppCustom.ScanPort},
+		Logger:          d.lc,
+		NetworkProtocol: netscan.NetworkTCP,
+	}
+
+	t0 := time.Now()
+	result := netscan.AutoDiscover(ctx, NewLLRPProtocolDiscovery(d), params)
 	if ctx.Err() != nil {
 		d.lc.Warn("Discover process has been cancelled!", "ctxErr", ctx.Err())
 	}
 
-	d.lc.Info(fmt.Sprintf("Discovered %d new devices in %v.", len(result), time.Since(t1)))
+	d.lc.Debugf("NetScan result: %+v", result)
+	d.lc.Infof("Discovered %d device(s) in %v via netscan.", len(result), time.Since(t0))
+
+	var discovered []dsModels.DiscoveredDevice
+	for _, res := range result {
+		dev, ok := res.Info.(dsModels.DiscoveredDevice)
+		if !ok {
+			d.lc.Warnf("unable to cast res.Info into dsModels.DiscoveredDevice. type=%T", res.Info)
+			continue
+		}
+		discovered = append(discovered, dev)
+	}
+
 	// pass the discovered devices to the EdgeX SDK to be passed through to the provision watchers
-	d.deviceCh <- result
+	d.deviceCh <- discovered
 }
